@@ -1,0 +1,33 @@
+<view class="login-wrap">
+  <view class="brand">
+    <view class="brand-logo">✒️</view>
+    <view class="brand-name">创作工坊</view>
+    <view class="brand-sub">{{profile.sub}}</view>
+  </view>
+
+  <view class="card">
+    <block wx:if="{{!showForm}}">
+      <view class="card-h"><text class="ico">🔗</text>绑定后免密进入</view>
+      <view class="muted tip">首次使用需要把微信身份和你的工作台账号绑定一次，之后每次打开小程序都会直接进入，不用再输密码。</view>
+      <view class="btn block" bindtap="onWxLogin">微信一键登录</view>
+      <view class="btn ghost block second" bindtap="showPwd">用账号密码登录</view>
+    </block>
+
+    <block wx:else>
+      <view class="card-h"><text class="ico">🔐</text>{{bindMode ? '绑定已有账号' : '账号密码登录'}}</view>
+      <view class="field-label">账号</view>
+      <input class="input" value="{{user}}" placeholder="例如 ChenMo" bindinput="onUser" />
+      <view class="field-label">密码</view>
+      <input class="input" password value="{{pass}}" placeholder="请输入密码" bindinput="onPass" />
+      <view class="err" wx:if="{{err}}">{{err}}</view>
+      <view class="btn block submit" bindtap="onSubmit">{{bindMode ? '绑定并进入' : '登录'}}</view>
+      <view class="btn ghost block second" bindtap="backToWx">返回微信登录</view>
+    </block>
+  </view>
+
+  <view class="guest" bindtap="onGuest">先以游客身份体验（改动不会保存）</view>
+
+  <view class="demo-note">
+    界面演示版：账号校验与数据同步尚未接入云端，这里的登录只走本地演示流程；正式版会调用云函数校验密码并下发登录态。
+  </view>
+</view>

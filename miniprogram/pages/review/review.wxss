@@ -1,0 +1,32 @@
+.acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 20rpx;
+  margin-top: 32rpx;
+}
+
+.rv {
+  padding: 24rpx 0;
+  border-bottom: 2rpx dashed #e7ddcc;
+}
+
+.rv:last-child {
+  border-bottom: none;
+}
+
+.rv-week {
+  font-size: 28rpx;
+  font-weight: 600;
+  margin-bottom: 10rpx;
+}
+
+.rv-row {
+  font-size: 27rpx;
+  line-height: 1.6;
+  color: #3a352c;
+  word-break: break-all;
+}
+
+.rv-row .k {
+  color: #938a7c;
+}

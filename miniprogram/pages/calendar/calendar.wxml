@@ -1,0 +1,36 @@
+<view class="page-wrap">
+  <view class="page-head">
+    <view class="h1">发布日历</view>
+    <view class="sub">按计划的发布日期排布，临近发布会高亮。</view>
+  </view>
+
+  <view class="card">
+    <view class="cal-head">
+      <view class="nav" bindtap="prevMonth">‹</view>
+      <view class="cal-title">{{title}}</view>
+      <view class="nav" bindtap="nextMonth">›</view>
+    </view>
+
+    <view class="cal-dow-row">
+      <view class="cal-dow" wx:for="{{dows}}" wx:key="*this">{{item}}</view>
+    </view>
+
+    <view class="cal-grid">
+      <view class="cal-day {{item.other?'other':''}} {{item.today?'today':''}}" wx:for="{{cells}}" wx:key="date" data-date="{{item.date}}" bindtap="tapDay">
+        <text class="dnum">{{item.num}}</text>
+        <view class="cal-evs">
+          <view class="cal-ev {{e.status}}" wx:for="{{item.evs}}" wx:for-item="e" wx:key="id" data-id="{{e.id}}" catchtap="tapEvent">{{e.title}}</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-h"><text class="ico">📅</text>本月计划</view>
+    <view class="row" wx:for="{{monthList}}" wx:key="id">
+      <text class="row-date">{{item.plan}}</text>
+      <text class="row-title">{{item.title}}</text>
+    </view>
+    <view class="empty" wx:if="{{!monthList.length}}">本月还没有排期</view>
+  </view>
+</view>

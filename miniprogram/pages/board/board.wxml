@@ -1,0 +1,40 @@
+<view class="page-wrap">
+  <view class="page-head">
+    <view class="h1">内容进度</view>
+    <view class="sub">按计划的发布日期排布，临近发布会高亮。</view>
+  </view>
+
+  <view class="chips">
+    <view class="chip {{filter==='all'?'active':''}}" data-f="all" bindtap="setFilter">全部</view>
+    <view class="chip {{filter==='idea'?'active':''}}" data-f="idea" bindtap="setFilter">想法</view>
+    <view class="chip {{filter==='doing'?'active':''}}" data-f="doing" bindtap="setFilter">制作中</view>
+    <view class="chip {{filter==='published'?'active':''}}" data-f="published" bindtap="setFilter">已发布</view>
+  </view>
+
+  <view class="card" wx:for="{{groups}}" wx:key="key">
+    <view class="card-h">
+      <text class="ico">{{item.icon}}</text>{{item.name}}
+      <text class="count">{{item.total}} 项</text>
+    </view>
+
+    <view class="ct {{filter==='all'?'':'big'}}" wx:for="{{item.items}}" wx:for-item="c" wx:key="id" data-id="{{c.id}}" bindtap="editContent" bindlongpress="changeStatus">
+      <view class="ct-title">{{c.title}}</view>
+      <view class="ct-meta">
+        <text class="plat" wx:if="{{c.platform}}">{{c.platform}}</text>
+        <text class="plan" wx:if="{{c.plan}}">📅 {{c.plan}}</text>
+        <text class="tag-{{c.status}} status">{{c.statusText}}</text>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{!item.items.length}}">这一列还没有内容</view>
+
+    <view class="pager" wx:if="{{item.pages>1}}">
+      <view class="pg {{item.page<=1?'dis':''}}" data-key="{{item.key}}" data-d="-1" catchtap="turn">‹</view>
+      <text>第 {{item.page}} / {{item.pages}} 页</text>
+      <view class="pg {{item.page>=item.pages?'dis':''}}" data-key="{{item.key}}" data-d="1" catchtap="turn">›</view>
+    </view>
+  </view>
+
+  <view class="btn block new-btn" bindtap="addContent">＋ 新建一条内容</view>
+  <view class="demo-note">轻触卡片可改名，长按可切换状态。</view>
+</view>

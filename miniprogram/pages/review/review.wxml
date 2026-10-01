@@ -1,0 +1,52 @@
+<view class="page-wrap">
+  <view class="page-head">
+    <view class="h1">每周复盘</view>
+    <view class="sub">回顾这一周，想清楚下周怎么改。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-h"><text class="ico">📝</text>本周填写</view>
+
+    <view class="field-label">本周完成了什么</view>
+    <textarea class="textarea" value="{{done}}" placeholder="列一下这周真正推进的事情" bindinput="onDone" auto-height />
+
+    <view class="field-label">卡在哪里</view>
+    <textarea class="textarea" value="{{stuck}}" placeholder="哪一步拖住了你？" bindinput="onStuck" auto-height />
+
+    <view class="field-label">下周怎么改 · 重点</view>
+    <textarea class="textarea" value="{{next}}" placeholder="只写一到两条最关键的动作" bindinput="onNext" auto-height />
+
+    <view class="field-label">高光时刻</view>
+    <textarea class="textarea" value="{{hi}}" placeholder="这周让你开心的一件事" bindinput="onHi" auto-height />
+
+    <view class="acts">
+      <view class="btn ghost" bindtap="clearForm">清空</view>
+      <view class="btn" bindtap="saveReview">保存复盘</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-h">
+      <text class="ico">🗂</text>历史记录
+      <text class="count">{{total}} 条</text>
+    </view>
+
+    <view class="rv" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" bindlongpress="removeReview">
+      <view class="rv-week">{{item.week}}</view>
+      <view class="rv-row" wx:if="{{item.done}}"><text class="k">完成：</text>{{item.done}}</view>
+      <view class="rv-row" wx:if="{{item.stuck}}"><text class="k">卡点：</text>{{item.stuck}}</view>
+      <view class="rv-row" wx:if="{{item.next}}"><text class="k">下周：</text>{{item.next}}</view>
+      <view class="rv-row" wx:if="{{item.hi}}"><text class="k">高光：</text>{{item.hi}}</view>
+    </view>
+
+    <view class="empty" wx:if="{{!list.length}}">还没有复盘记录</view>
+
+    <view class="pager" wx:if="{{pages>1}}">
+      <view class="pg {{page<=1?'dis':''}}" data-d="-1" bindtap="turn">‹</view>
+      <text>第 {{page}} / {{pages}} 页</text>
+      <view class="pg {{page>=pages?'dis':''}}" data-d="1" bindtap="turn">›</view>
+    </view>
+  </view>
+
+  <view class="demo-note">长按某条历史记录可以删除。</view>
+</view>

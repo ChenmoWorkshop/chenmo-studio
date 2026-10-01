@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 创作工坊 build 20261001-2230：移动端顶栏（图片/文本内嵌）+ 自定义优先级下拉 + 首次保存被吞修复 -->
+<!-- 创作工坊 build 20261001-2305：登录卡微信一键登录入口（桌面/移动共用）+ 小程序界面演示版 -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
@@ -548,6 +548,11 @@
   .auth-btn { border: none; background: var(--green); color: #fff; padding: 11px; border-radius: 12px; font-size: 15px; font-weight: 600; margin-top: 4px; }
   .auth-btn:hover { filter: brightness(1.06); }
   .auth-btn-ghost { background: var(--red-soft); color: var(--red); }
+  /* 微信一键登录入口：仅小程序端真正支持微信授权，网页端点击给出引导提示 */
+  .auth-wx-line { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 11px; margin: 2px 0; }
+  .auth-wx-line::before, .auth-wx-line::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+  .auth-wx-btn { background: #07c160; }
+  .auth-wx-tip { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.5; margin-top: 2px; }
   .auth-err { font-size: 12px; color: var(--red); min-height: 16px; margin-top: 2px; text-align: center; }
   .auth-cancel { text-align: center; margin-top: 2px; }
   .auth-cancel button, .auth-guest { border: none; background: transparent; color: var(--muted); font-size: 12px; text-decoration: underline; text-align: center; }
@@ -807,6 +812,9 @@
       <label>密码<input id="loginPass" type="password" maxlength="40" placeholder="至少 6 位" required></label>
       <div class="auth-err" id="authErr"></div>
       <button class="auth-btn" type="submit">进入工作台</button>
+      <div class="auth-wx-line"><span>或</span></div>
+      <button class="auth-btn auth-wx-btn" id="wxLoginBtn" type="button">微信一键登录</button>
+      <div class="auth-wx-tip">微信授权仅在小程序端支持；账号数据与网页版通用，绑定后小程序免密进入</div>
     </form>
 
     <form class="auth-form hidden" id="regForm" autocomplete="off">
@@ -2065,6 +2073,13 @@ $('#loginForm').addEventListener('submit', async e => {
 });
 
 /* ---- 游客体验：用内置演示数据体验全部功能，任何改动都不写云端 ---- */
+$('#wxLoginBtn').addEventListener('click', () => {
+  const t = $('#toast');
+  t.textContent = '微信一键登录请在「创作工坊」小程序中使用，账号与网页版通用';
+  t.classList.add('show');
+  clearTimeout(t._tm);
+  t._tm = setTimeout(() => t.classList.remove('show'), 2600);
+});
 $('#guestBtn').addEventListener('click', () => {
   SESSION = { guest: true, name: DEFAULT_PROFILE.name, sub: DEFAULT_PROFILE.sub, avatar: '' };
   saveSession(SESSION);

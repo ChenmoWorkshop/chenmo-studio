@@ -1,0 +1,304 @@
+/* 创作工坊 · 小程序共享样式
+   配色与网页版完全一致（暖色纸感），尺寸用 rpx（750rpx = 屏宽） */
+page {
+  --bg: #f7f1e6;
+  --surface: #fffdf8;
+  --surface-2: #fbf5ea;
+  --ink: #3a352c;
+  --muted: #938a7c;
+  --line: #e7ddcc;
+  --green: #4a7c5e;
+  --green-soft: #e3efe7;
+  --orange: #d98324;
+  --orange-soft: #fbeeda;
+  --red: #c4604a;
+  --red-soft: #f7e3dd;
+  background: #f7f1e6;
+  color: #3a352c;
+  font-size: 28rpx;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page-wrap {
+  padding: 24rpx 32rpx 80rpx;
+}
+
+/* 卡片 */
+.card {
+  background: #fffdf8;
+  border: 2rpx solid #e7ddcc;
+  border-radius: 32rpx;
+  padding: 30rpx;
+  margin-bottom: 28rpx;
+  box-shadow: 0 4rpx 20rpx rgba(120, 100, 70, 0.10);
+}
+
+.card-h {
+  display: flex;
+  align-items: center;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #3a352c;
+  margin-bottom: 24rpx;
+}
+
+.card-h .ico {
+  margin-right: 12rpx;
+}
+
+.card-h .count {
+  margin-left: auto;
+  font-size: 26rpx;
+  font-weight: 400;
+  color: #938a7c;
+}
+
+/* 页头 */
+.page-head {
+  padding: 12rpx 0 24rpx;
+}
+
+.page-head .h1 {
+  font-size: 46rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+}
+
+.page-head .sub {
+  margin-top: 8rpx;
+  font-size: 26rpx;
+  color: #938a7c;
+}
+
+/* 顶部通栏（头像 + 工作台名 + 每日名言） */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18rpx 32rpx;
+  margin: 0 -32rpx 24rpx;
+  border-bottom: 2rpx solid #e7ddcc;
+  background: #f7f1e6;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.topbar-left .ava {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: #fffdf8;
+  border: 2rpx solid #e7ddcc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  overflow: hidden;
+}
+
+.topbar-left .brand-name {
+  margin-left: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  max-width: 220rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.topbar-right {
+  flex: 1;
+  margin-left: 24rpx;
+  text-align: right;
+}
+
+.topbar-right .q {
+  font-size: 24rpx;
+  line-height: 1.5;
+  color: #3a352c;
+}
+
+.topbar-right .a {
+  font-size: 20rpx;
+  color: #938a7c;
+}
+
+/* 筛选与标签 */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.chip {
+  padding: 10rpx 26rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid #e7ddcc;
+  background: #fffdf8;
+  font-size: 26rpx;
+  color: #938a7c;
+}
+
+.chip.active {
+  background: #4a7c5e;
+  border-color: #4a7c5e;
+  color: #ffffff;
+}
+
+/* 按钮 */
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: auto;
+  height: 80rpx;
+  padding: 0 36rpx;
+  border-radius: 20rpx;
+  background: #4a7c5e;
+  color: #ffffff;
+  font-size: 30rpx;
+}
+
+.btn.ghost {
+  background: transparent;
+  color: #4a7c5e;
+  border: 2rpx solid #4a7c5e;
+}
+
+.btn.block {
+  width: 100%;
+}
+
+.btn.dis {
+  opacity: 0.45;
+}
+
+/* 输入框 */
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 80rpx;
+  padding: 0 24rpx;
+  border: 2rpx solid #e7ddcc;
+  border-radius: 20rpx;
+  background: #fffdf8;
+  font-size: 28rpx;
+}
+
+.textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 170rpx;
+  padding: 20rpx 24rpx;
+  border: 2rpx solid #e7ddcc;
+  border-radius: 20rpx;
+  background: #fffdf8;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+.field-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  margin: 24rpx 0 12rpx;
+}
+
+/* 优先级 / 状态徽标 */
+.pri {
+  padding: 4rpx 16rpx;
+  border-radius: 10rpx;
+  font-size: 22rpx;
+}
+
+.pri.high {
+  background: #f7e3dd;
+  color: #c4604a;
+}
+
+.pri.mid {
+  background: #fbeeda;
+  color: #d98324;
+}
+
+.pri.low {
+  background: #e3efe7;
+  color: #4a7c5e;
+}
+
+.tag-idea {
+  background: #fbeeda;
+  color: #d98324;
+}
+
+.tag-doing {
+  background: #e3efe7;
+  color: #4a7c5e;
+}
+
+.tag-published {
+  background: #f1efe8;
+  color: #5f5e5a;
+}
+
+/* 分页 */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28rpx;
+  margin-top: 24rpx;
+  font-size: 26rpx;
+  color: #938a7c;
+}
+
+.pg {
+  width: 68rpx;
+  height: 68rpx;
+  line-height: 64rpx;
+  text-align: center;
+  border: 2rpx solid #e7ddcc;
+  border-radius: 16rpx;
+  background: #fffdf8;
+  color: #938a7c;
+}
+
+.pg.dis {
+  opacity: 0.35;
+}
+
+.empty {
+  padding: 70rpx 0;
+  text-align: center;
+  color: #938a7c;
+  font-size: 28rpx;
+}
+
+.muted {
+  color: #938a7c;
+  font-size: 26rpx;
+}
+
+.divider {
+  height: 2rpx;
+  background: #e7ddcc;
+  margin: 24rpx 0;
+}
+
+/* 演示提示条 */
+.demo-note {
+  margin: 8rpx 0 24rpx;
+  padding: 18rpx 24rpx;
+  border-radius: 20rpx;
+  background: #fbf5ea;
+  border: 2rpx dashed #e7ddcc;
+  color: #938a7c;
+  font-size: 24rpx;
+  line-height: 1.6;
+}

@@ -1,0 +1,71 @@
+<view class="page-wrap">
+  <view class="topbar">
+    <view class="topbar-left" bindtap="goProfile">
+      <view class="ava">✒️</view>
+      <view class="brand-name">{{profile.name}}</view>
+    </view>
+    <view class="topbar-right" bindtap="nextQuote">
+      <view class="q">「{{quoteText}}」</view>
+      <view class="a">—— {{quoteAuthor}}</view>
+    </view>
+  </view>
+
+  <view class="head">
+    <view class="h1">{{greeting}}</view>
+    <view class="sub">{{today}}</view>
+  </view>
+
+  <view class="card">
+    <view class="card-h">
+      <text class="ico">📌</text>今日重点
+      <text class="count">{{left}} 项待完成 / 共 {{total}}</text>
+    </view>
+
+    <view class="quick">
+      <input class="input flex" value="{{input}}" placeholder="添加今天要做的事…" bindinput="onInput" bindconfirm="addTodo" confirm-type="done" />
+      <view class="pri-picker" bindtap="togglePri">
+        <text>{{priText}}</text>
+        <text class="caret">▾</text>
+      </view>
+      <view class="btn add-btn" bindtap="addTodo">添加</view>
+    </view>
+
+    <view class="pri-menu" wx:if="{{priOpen}}">
+      <view class="pri-opt {{pri==='high'?'sel':''}}" data-v="high" catchtap="pickPri">高</view>
+      <view class="pri-opt {{pri==='mid'?'sel':''}}" data-v="mid" catchtap="pickPri">中</view>
+      <view class="pri-opt {{pri==='low'?'sel':''}}" data-v="low" catchtap="pickPri">低</view>
+    </view>
+
+    <view class="chips">
+      <view class="chip {{filter==='all'?'active':''}}" data-f="all" bindtap="setFilter">全部</view>
+      <view class="chip {{filter==='high'?'active':''}}" data-f="high" bindtap="setFilter">高优先级</view>
+      <view class="chip {{filter==='todo'?'active':''}}" data-f="todo" bindtap="setFilter">未完成</view>
+    </view>
+
+    <view class="todo" wx:for="{{todos}}" wx:key="id">
+      <view class="check {{item.done?'done':''}}" data-id="{{item.id}}" catchtap="toggleDone">{{item.done?'✓':''}}</view>
+      <view class="txt {{item.done?'done':''}}" data-id="{{item.id}}" bindtap="editTodo">{{item.text}}</view>
+      <text class="pri {{item.pri}}">{{item.priText}}</text>
+    </view>
+
+    <view class="empty" wx:if="{{!todos.length}}">这里还没有内容</view>
+
+    <view class="pager" wx:if="{{pages>1}}">
+      <view class="pg {{page<=1?'dis':''}}" data-d="-1" bindtap="turn">‹</view>
+      <text>第 {{page}} / {{pages}} 页</text>
+      <view class="pg {{page>=pages?'dis':''}}" data-d="1" bindtap="turn">›</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-h"><text class="ico">📊</text>内容进度概览</view>
+    <view class="stat" wx:for="{{stats}}" wx:key="key">
+      <view class="dot {{item.key}}"></view>
+      <text class="name">{{item.name}}</text>
+      <view class="bar"><view class="fill {{item.key}}" style="width:{{item.pct}}%"></view></view>
+      <text class="num">{{item.n}}</text>
+    </view>
+  </view>
+
+  <view class="demo-note">界面演示版：当前为本地示例数据，接入云函数后即为你的真实数据。</view>
+</view>

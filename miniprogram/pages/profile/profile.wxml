@@ -1,0 +1,44 @@
+<view class="page-wrap">
+  <view class="page-head">
+    <view class="h1">工作台资料</view>
+    <view class="sub">头像与名称会显示在工作台左上角。</view>
+  </view>
+
+  <view class="card">
+    <view class="ava-row" bindtap="pickAvatar">
+      <view class="ava">
+        <image wx:if="{{profile.avatar}}" class="ava-img" src="{{profile.avatar}}" mode="aspectFill" />
+        <text wx:else>✒️</text>
+      </view>
+      <view class="ava-tip">
+        <view class="ava-t">更换头像</view>
+        <view class="muted">点击从相册或相机选择</view>
+      </view>
+    </view>
+
+    <view class="field-label">工作台名称</view>
+    <input class="input" value="{{profile.name}}" placeholder="例如 尘墨工坊" bindinput="onName" maxlength="12" />
+
+    <view class="field-label">副标题</view>
+    <input class="input" value="{{profile.sub}}" placeholder="例如 灵感 · 进度 · 复盘" bindinput="onSub" maxlength="20" />
+
+    <view class="btn block submit" bindtap="save">保存</view>
+  </view>
+
+  <view class="card">
+    <view class="card-h"><text class="ico">🔐</text>账号</view>
+    <view class="acc-row">
+      <text class="k">账号</text>
+      <text class="v">{{account}}</text>
+    </view>
+    <view class="acc-row">
+      <text class="k">微信绑定</text>
+      <text class="v">{{bound ? '已绑定（免密登录）' : '未绑定'}}</text>
+    </view>
+    <view class="btn ghost block logout" bindtap="logout">退出登录</view>
+  </view>
+
+  <view class="demo-note">
+    界面演示版：这里的资料只存在手机本地；正式版会同步到云端账号，网页版与小程序共用同一份资料。
+  </view>
+</view>

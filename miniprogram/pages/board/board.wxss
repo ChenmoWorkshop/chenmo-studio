@@ -1,0 +1,53 @@
+.ct {
+  padding: 22rpx 24rpx;
+  margin-bottom: 18rpx;
+  border: 2rpx solid #e7ddcc;
+  border-radius: 20rpx;
+  background: #fbf5ea;
+}
+
+.ct.big {
+  padding: 30rpx 28rpx;
+  background: #fffdf8;
+}
+
+.ct-title {
+  font-size: 30rpx;
+  line-height: 1.5;
+}
+
+.ct.big .ct-title {
+  font-size: 32rpx;
+}
+
+.ct-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  color: #938a7c;
+}
+
+.plat {
+  padding: 2rpx 14rpx;
+  margin-right: 14rpx;
+  border-radius: 8rpx;
+  background: #fffdf8;
+  border: 2rpx solid #e7ddcc;
+  color: #5f5e5a;
+}
+
+.plan {
+  margin-right: auto;
+}
+
+.status {
+  padding: 4rpx 16rpx;
+  border-radius: 10rpx;
+  font-size: 22rpx;
+}
+
+.new-btn {
+  margin-top: 8rpx;
+}

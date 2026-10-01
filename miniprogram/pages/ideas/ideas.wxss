@@ -1,0 +1,23 @@
+.submit {
+  margin-top: 32rpx;
+}
+
+.card.idea {
+  padding: 26rpx 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.idea-title {
+  font-size: 30rpx;
+  line-height: 1.5;
+}
+
+.idea-meta {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #938a7c;
+}
+
+.pager {
+  margin-bottom: 40rpx;
+}

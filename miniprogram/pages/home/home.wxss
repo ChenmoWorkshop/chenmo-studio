@@ -1,0 +1,182 @@
+.head {
+  padding: 6rpx 0 28rpx;
+}
+
+.head .h1 {
+  font-size: 48rpx;
+  font-weight: 700;
+}
+
+.head .sub {
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  color: #938a7c;
+}
+
+/* 快捷添加 */
+.quick {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.flex {
+  flex: 1;
+  min-width: 0;
+}
+
+.pri-picker {
+  display: flex;
+  align-items: center;
+  height: 80rpx;
+  margin-left: 16rpx;
+  padding: 0 22rpx;
+  border: 2rpx solid #e7ddcc;
+  border-radius: 20rpx;
+  background: #fffdf8;
+  font-size: 28rpx;
+}
+
+.pri-picker .caret {
+  margin-left: 10rpx;
+  font-size: 20rpx;
+  color: #938a7c;
+}
+
+.add-btn {
+  margin-left: 16rpx;
+  height: 80rpx;
+  padding: 0 30rpx;
+}
+
+.pri-menu {
+  position: absolute;
+  right: 92rpx;
+  margin-top: -116rpx;
+  width: 160rpx;
+  padding: 8rpx;
+  background: #fffdf8;
+  border: 2rpx solid #e7ddcc;
+  border-radius: 20rpx;
+  box-shadow: 0 10rpx 30rpx rgba(120, 100, 70, 0.16);
+  z-index: 20;
+}
+
+.pri-opt {
+  padding: 18rpx 24rpx;
+  border-radius: 14rpx;
+  font-size: 28rpx;
+}
+
+.pri-opt.sel {
+  background: #fbf5ea;
+  color: #4a7c5e;
+  font-weight: 600;
+}
+
+/* 待办条目 */
+.todo {
+  display: flex;
+  align-items: center;
+  padding: 22rpx 0;
+  border-bottom: 2rpx dashed #e7ddcc;
+}
+
+.todo:last-child {
+  border-bottom: none;
+}
+
+.check {
+  width: 46rpx;
+  height: 46rpx;
+  flex-shrink: 0;
+  margin-right: 20rpx;
+  border: 2rpx solid #e7ddcc;
+  border-radius: 12rpx;
+  background: #fffdf8;
+  color: #ffffff;
+  font-size: 26rpx;
+  text-align: center;
+  line-height: 42rpx;
+}
+
+.check.done {
+  background: #4a7c5e;
+  border-color: #4a7c5e;
+}
+
+.txt {
+  flex: 1;
+  min-width: 0;
+  font-size: 30rpx;
+}
+
+.txt.done {
+  color: #938a7c;
+  text-decoration: line-through;
+}
+
+/* 进度概览 */
+.stat {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+}
+
+.dot {
+  width: 22rpx;
+  height: 22rpx;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+
+.dot.idea {
+  background: #d98324;
+}
+
+.dot.doing {
+  background: #4a7c5e;
+}
+
+.dot.published {
+  background: #b4b2a9;
+}
+
+.stat .name {
+  width: 150rpx;
+  margin-left: 16rpx;
+  font-size: 28rpx;
+}
+
+.bar {
+  flex: 1;
+  height: 16rpx;
+  margin: 0 20rpx;
+  border-radius: 999rpx;
+  background: #fbf5ea;
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: 999rpx;
+}
+
+.fill.idea {
+  background: #d98324;
+}
+
+.fill.doing {
+  background: #4a7c5e;
+}
+
+.fill.published {
+  background: #b4b2a9;
+}
+
+.stat .num {
+  width: 44rpx;
+  text-align: right;
+  font-size: 30rpx;
+  font-weight: 600;
+}

@@ -1,0 +1,39 @@
+<view class="page-wrap">
+  <view class="page-head">
+    <view class="h1">灵感收集</view>
+    <view class="sub">随手记下的想法，攒起来就是选题库。</view>
+  </view>
+
+  <view class="card">
+    <view class="card-h">
+      <text class="ico">💡</text>记一条灵感
+      <text class="count" bindtap="toggleForm">{{formOpen ? '收起' : '展开'}}</text>
+    </view>
+    <block wx:if="{{formOpen}}">
+      <view class="field-label">内容</view>
+      <input class="input" value="{{title}}" placeholder="一句话写清楚这条灵感" bindinput="onTitle" />
+      <view class="field-label">分类</view>
+      <input class="input" value="{{cat}}" placeholder="例如 选题 / 脚本 / 工具" bindinput="onCat" />
+      <view class="btn block submit" bindtap="addIdea">添加</view>
+    </block>
+    <view class="muted" wx:else>按「展开」写一条新的灵感。</view>
+  </view>
+
+  <view class="chips">
+    <view class="chip {{filter==='all'?'active':''}}" data-f="all" bindtap="setFilter">全部</view>
+    <view class="chip {{filter===item?'active':''}}" wx:for="{{cats}}" wx:key="*this" data-f="{{item}}" bindtap="setFilter">{{item}}</view>
+  </view>
+
+  <view class="card idea" wx:for="{{list}}" wx:key="id" data-id="{{item.id}}" bindtap="editIdea">
+    <view class="idea-title">{{item.title}}</view>
+    <view class="idea-meta">{{item.cat}}<text wx:if="{{item.time}}"> · {{item.time}}</text></view>
+  </view>
+
+  <view class="empty" wx:if="{{!list.length}}">这一类还没有灵感</view>
+
+  <view class="pager" wx:if="{{pages>1}}">
+    <view class="pg {{page<=1?'dis':''}}" data-d="-1" bindtap="turn">‹</view>
+    <text>第 {{page}} / {{pages}} 页</text>
+    <view class="pg {{page>=pages?'dis':''}}" data-d="1" bindtap="turn">›</view>
+  </view>
+</view>

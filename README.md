@@ -24,6 +24,7 @@
 - [自部署指南](#自部署指南)
 - [二次创作：配套技能包](#二次创作配套技能包)
 - [目录结构](#目录结构)
+- [微信小程序（界面演示版）](#微信小程序界面演示版)
 - [成本与续期](#成本与续期)
 - [安全说明](#安全说明)
 - [踩坑记录](#踩坑记录)
@@ -219,13 +220,25 @@ cp -r skills/workbench-cloudbase-auth   ~/.workbuddy/skills/
 │       ├── index.js                  # 云函数：鉴权 + 数据读写 + 名言词库
 │       ├── package.json
 │       └── package-lock.json
+├── miniprogram/                      # 微信小程序界面演示版（可导入开发者工具预览）
 ├── skills/                           # 配套技能包（二次创作用）
 │   ├── README.md
 │   ├── workbench-cloud-sync-upgrade/SKILL.md
 │   └── workbench-cloudbase-auth/SKILL.md
+├── CHANGELOG.md                      # 更新日志
 ├── LICENSE
 └── README.md
 ```
+
+## 微信小程序（界面演示版）
+
+`miniprogram/` 是与网页版视觉一致的微信小程序工程，含登录绑定、工作台、灵感、进度、日历、复盘、资料共 7 个页面。当前数据走本地缓存（演示），正式接入云端需要：
+
+1. 注册小程序（个人主体，免费）并取得 AppID
+2. 提交 ICP 备案（发布硬性要求，管局终审 1–20 个工作日，期间可并行开发）
+3. 在微信开发者工具中把本项目使用的 CloudBase 环境导入为小程序云开发环境，登录态由云函数通过 `OPENID` 下发
+
+预览方式：微信开发者工具 → 导入项目 → 选择 `miniprogram/` 目录（默认游客 AppID 即可打开预览）。
 
 ## 成本与续期
 

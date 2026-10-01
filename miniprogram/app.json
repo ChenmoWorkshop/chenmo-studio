@@ -1,0 +1,33 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/home/home",
+    "pages/ideas/ideas",
+    "pages/board/board",
+    "pages/calendar/calendar",
+    "pages/review/review",
+    "pages/profile/profile"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#f7f1e6",
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "创作工坊",
+    "backgroundColor": "#f7f1e6",
+    "backgroundTextStyle": "light"
+  },
+  "tabBar": {
+    "color": "#938a7c",
+    "selectedColor": "#4a7c5e",
+    "backgroundColor": "#fffdf8",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/home/home", "text": "工作台" },
+      { "pagePath": "pages/ideas/ideas", "text": "灵感" },
+      { "pagePath": "pages/board/board", "text": "进度" },
+      { "pagePath": "pages/calendar/calendar", "text": "日历" },
+      { "pagePath": "pages/review/review", "text": "复盘" }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

@@ -1,0 +1,120 @@
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20rpx;
+}
+
+.cal-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  padding: 0 40rpx;
+}
+
+.nav {
+  width: 64rpx;
+  height: 64rpx;
+  line-height: 60rpx;
+  text-align: center;
+  border: 2rpx solid #e7ddcc;
+  border-radius: 16rpx;
+  background: #fffdf8;
+  color: #938a7c;
+  font-size: 32rpx;
+}
+
+.cal-dow-row {
+  display: flex;
+}
+
+.cal-dow {
+  flex: 1;
+  text-align: center;
+  font-size: 22rpx;
+  color: #938a7c;
+  padding: 6rpx 0;
+}
+
+.cal-grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.cal-day {
+  width: 14.28%;
+  box-sizing: border-box;
+  min-height: 116rpx;
+  padding: 6rpx;
+  border: 2rpx solid transparent;
+  border-radius: 12rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.cal-day.today {
+  border-color: #4a7c5e;
+  background: #e3efe7;
+}
+
+.cal-day.other .dnum {
+  color: #c9c0b2;
+}
+
+.dnum {
+  font-size: 22rpx;
+  color: #5f5e5a;
+}
+
+.cal-evs {
+  margin-top: 4rpx;
+}
+
+.cal-ev {
+  font-size: 18rpx;
+  line-height: 1.4;
+  padding: 2rpx 6rpx;
+  margin-bottom: 4rpx;
+  border-radius: 6rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cal-ev.idea {
+  background: #fbeeda;
+  color: #d98324;
+}
+
+.cal-ev.doing {
+  background: #e3efe7;
+  color: #4a7c5e;
+}
+
+.cal-ev.published {
+  background: #f1efe8;
+  color: #5f5e5a;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 0;
+  border-bottom: 2rpx dashed #e7ddcc;
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.row-date {
+  width: 180rpx;
+  font-size: 24rpx;
+  color: #938a7c;
+}
+
+.row-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 28rpx;
+}

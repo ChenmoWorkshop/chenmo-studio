@@ -1,0 +1,61 @@
+.ava-row {
+  display: flex;
+  align-items: center;
+  padding-bottom: 28rpx;
+  border-bottom: 2rpx solid #e7ddcc;
+}
+
+.ava {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background: #fffdf8;
+  border: 2rpx solid #e7ddcc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 52rpx;
+  overflow: hidden;
+}
+
+.ava-img {
+  width: 100%;
+  height: 100%;
+}
+
+.ava-tip {
+  margin-left: 28rpx;
+}
+
+.ava-t {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.acc-row {
+  display: flex;
+  align-items: center;
+  padding: 18rpx 0;
+  border-bottom: 2rpx dashed #e7ddcc;
+}
+
+.acc-row .k {
+  width: 180rpx;
+  color: #938a7c;
+  font-size: 27rpx;
+}
+
+.acc-row .v {
+  flex: 1;
+  font-size: 28rpx;
+}
+
+.submit {
+  margin-top: 32rpx;
+}
+
+.logout {
+  margin-top: 28rpx;
+  color: #c4604a;
+  border-color: #c4604a;
+}
