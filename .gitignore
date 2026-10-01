@@ -1,0 +1,21 @@
+# ---- 依赖 ----
+node_modules/
+functions/**/node_modules/
+
+# ---- WorkBuddy 工作区数据（个人笔记 / 备份 / 内部元数据，不入库）----
+.workbuddy/
+*.genie
+
+# ---- 日志与临时文件 ----
+*.log
+.DS_Store
+Thumbs.db
+
+# ---- 环境变量与密钥 ----
+.env
+.env.*
+*.pem
+
+# ---- 数据备份（含真实个人数据，严禁入库）----
+backups/
+*.bak.json
