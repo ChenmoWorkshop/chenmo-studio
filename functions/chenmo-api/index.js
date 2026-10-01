@@ -272,6 +272,10 @@ function resp(statusCode, headers, obj) {
 
 function parseBody(event) {
   let raw = event.body;
+  /* 小程序 wx.cloud.callFunction 没有 HTTP 包装，event 本身就是业务参数对象 */
+  if ((raw == null || raw === '') && !event.httpMethod) {
+    return Object.assign({}, event);
+  }
   if (raw == null || raw === '') return {};
   if (event.isBase64Encoded) {
     try { raw = Buffer.from(raw, 'base64').toString('utf8'); } catch (e) {}
