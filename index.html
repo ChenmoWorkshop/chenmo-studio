@@ -553,6 +553,13 @@
   .auth-wx-line::before, .auth-wx-line::after { content: ''; flex: 1; height: 1px; background: var(--line); }
   .auth-wx-btn { background: #07c160; }
   .auth-wx-tip { font-size: 11px; color: var(--muted); text-align: center; line-height: 1.5; margin-top: 2px; }
+  /* 忘记密码 / 邮箱验证码 */
+  .auth-forgot { border: none; background: transparent; color: var(--muted); font-size: 12px; text-decoration: underline; text-align: right; padding: 0; }
+  .code-row { display: flex; gap: 6px; align-items: stretch; }
+  .code-row input { flex: 1; min-width: 0; }
+  .code-btn { border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); border-radius: 9px; padding: 0 10px; font-size: 12px; white-space: nowrap; }
+  .code-btn:disabled { opacity: .55; }
+  .auth-hint { font-size: 12px; color: var(--muted); min-height: 15px; text-align: center; line-height: 1.4; }
   .auth-err { font-size: 12px; color: var(--red); min-height: 16px; margin-top: 2px; text-align: center; }
   .auth-cancel { text-align: center; margin-top: 2px; }
   .auth-cancel button, .auth-guest { border: none; background: transparent; color: var(--muted); font-size: 12px; text-decoration: underline; text-align: center; }
@@ -810,11 +817,29 @@
     <form class="auth-form" id="loginForm" autocomplete="off">
       <label>账号<input id="loginUser" maxlength="20" placeholder="用户名" required></label>
       <label>密码<input id="loginPass" type="password" maxlength="40" placeholder="至少 6 位" required></label>
+      <button class="auth-forgot" id="forgotBtn" type="button">忘记密码？</button>
       <div class="auth-err" id="authErr"></div>
       <button class="auth-btn" type="submit">进入工作台</button>
       <div class="auth-wx-line"><span>或</span></div>
       <button class="auth-btn auth-wx-btn" id="wxLoginBtn" type="button">微信一键登录</button>
       <div class="auth-wx-tip">微信授权仅在小程序端支持；账号数据与网页版通用，绑定后小程序免密进入</div>
+    </form>
+
+    <!-- 找回密码：验证码发到账号绑定的密保邮箱 -->
+    <form class="auth-form hidden" id="resetForm" autocomplete="off">
+      <div class="auth-sub" style="margin:0 0 2px">验证码将发送到该账号绑定的密保邮箱</div>
+      <label>账号<input id="resetUser" maxlength="20" placeholder="你的用户名" required></label>
+      <label>邮箱验证码
+        <div class="code-row">
+          <input id="resetCode" maxlength="6" inputmode="numeric" placeholder="6 位验证码" required>
+          <button class="code-btn" id="resetSend" type="button">发送验证码</button>
+        </div>
+      </label>
+      <label>新密码<input id="resetPass" type="password" maxlength="40" placeholder="至少 6 位" required></label>
+      <div class="auth-hint" id="resetHint"></div>
+      <div class="auth-err" id="resetErr"></div>
+      <button class="auth-btn" type="submit">重置密码</button>
+      <div class="auth-cancel"><button id="resetBack" type="button">返回登录</button></div>
     </form>
 
     <form class="auth-form hidden" id="regForm" autocomplete="off">
@@ -847,6 +872,17 @@
       <div class="ava-tip">点击头像更换自定义图片，不选则用默认图标</div>
       <label>工作台名称<input id="profName" maxlength="16" placeholder="例如：尘墨工坊"></label>
       <label>副标题<input id="profSub" maxlength="24" placeholder="例如：灵感 · 进度 · 复盘"></label>
+      <label>密保邮箱（用于自助找回密码）
+        <div class="code-row">
+          <input id="profEmail" type="email" maxlength="60" placeholder="未绑定">
+          <button class="code-btn" id="profEmailSend" type="button">发送验证码</button>
+        </div>
+      </label>
+      <div class="code-row">
+        <input id="profEmailCode" maxlength="6" inputmode="numeric" placeholder="邮箱验证码">
+        <button class="code-btn" id="profEmailBind" type="button">确认绑定</button>
+      </div>
+      <div class="auth-hint" id="profEmailNow"></div>
       <div class="auth-err" id="profErr"></div>
       <button class="auth-btn" type="submit">保存</button>
       <button class="auth-btn auth-btn-ghost" id="profLogout" type="button">退出登录</button>
@@ -2009,10 +2045,11 @@ function showAuth(tab){
 function switchAuthTab(tab){
   const isLogin = tab === 'login';
   $('#tabLogin').classList.toggle('active', isLogin);
-  $('#tabRegister').classList.toggle('active', !isLogin);
+  $('#tabRegister').classList.toggle('active', tab === 'register');
   $('#loginForm').classList.toggle('hidden', !isLogin);
-  $('#regForm').classList.toggle('hidden', isLogin);
-  $('#authErr').textContent = ''; $('#regErr').textContent = '';
+  $('#regForm').classList.toggle('hidden', tab !== 'register');
+  $('#resetForm').classList.toggle('hidden', tab !== 'reset');
+  $('#authErr').textContent = ''; $('#regErr').textContent = ''; $('#resetErr').textContent = '';
 }
 $('#tabLogin').addEventListener('click', () => switchAuthTab('login'));
 $('#tabRegister').addEventListener('click', () => switchAuthTab('register'));
@@ -2041,7 +2078,7 @@ $('#regForm').addEventListener('submit', async e => {
   btn.disabled = true; const old = btn.textContent; btn.textContent = '正在创建…';
   try{
     const r = await api('register', { user: u, pass: p1, name: name, avatar: _regAvatar });
-    SESSION = { token: r.token, user: r.profile.user, name: r.profile.name, sub: r.profile.sub, avatar: r.profile.avatar };
+    SESSION = { token: r.token, user: r.profile.user, name: r.profile.name, sub: r.profile.sub, avatar: r.profile.avatar, email: r.profile.email || '' };
     saveSession(SESSION);
     enterApp(); toast('注册成功，欢迎入驻 ✨');
   }catch(ex){
@@ -2062,11 +2099,66 @@ $('#loginForm').addEventListener('submit', async e => {
   btn.disabled = true; const old = btn.textContent; btn.textContent = '正在登录…';
   try{
     const r = await api('login', { user: u, pass: p });
-    SESSION = { token: r.token, user: r.profile.user, name: r.profile.name, sub: r.profile.sub, avatar: r.profile.avatar };
+    SESSION = { token: r.token, user: r.profile.user, name: r.profile.name, sub: r.profile.sub, avatar: r.profile.avatar, email: r.profile.email || '' };
     saveSession(SESSION);
     enterApp(); toast('欢迎回来，' + r.profile.name);
   }catch(ex){
     err.textContent = ex.message || '登录失败，请稍后再试';
+  }finally{
+    btn.disabled = false; btn.textContent = old;
+  }
+});
+
+/* ---- 忘记密码（验证码发到密保邮箱） ---- */
+function startCodeCountdown(btn){
+  const old = btn.textContent;
+  btn.disabled = true;
+  let s = 60; btn.textContent = s + 's 后重发';
+  const tm = setInterval(() => {
+    s--;
+    if (s <= 0){ clearInterval(tm); btn.disabled = false; btn.textContent = old; }
+    else btn.textContent = s + 's 后重发';
+  }, 1000);
+}
+$('#forgotBtn').addEventListener('click', () => {
+  switchAuthTab('reset');
+  $('#resetUser').value = $('#loginUser').value.trim();
+  $('#resetHint').textContent = '';
+});
+$('#resetBack').addEventListener('click', () => switchAuthTab('login'));
+$('#resetSend').addEventListener('click', async () => {
+  const btn = $('#resetSend');
+  const u = $('#resetUser').value.trim();
+  const err = $('#resetErr'), hint = $('#resetHint');
+  err.textContent = '';
+  if (!u){ err.textContent = '请先输入账号'; return; }
+  btn.disabled = true; const old = btn.textContent; btn.textContent = '发送中…';
+  try{
+    const r = await api('sendEmailCode', { purpose: 'reset', user: u });
+    hint.textContent = '验证码已发送至 ' + r.email + '，10 分钟内有效';
+    startCodeCountdown(btn);
+  }catch(ex){
+    btn.disabled = false; btn.textContent = old;
+    err.textContent = ex.message || '发送失败，请稍后再试';
+  }
+});
+$('#resetForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const u = $('#resetUser').value.trim();
+  const code = $('#resetCode').value.trim();
+  const p = $('#resetPass').value;
+  const err = $('#resetErr');
+  const btn = $('#resetForm button[type=submit]');
+  if (p.length < 6) return err.textContent = '新密码至少 6 位';
+  err.textContent = '';
+  btn.disabled = true; const old = btn.textContent; btn.textContent = '正在重置…';
+  try{
+    await api('resetPassword', { user: u, code: code, pass: p });
+    toast('密码已重置，请用新密码登录');
+    switchAuthTab('login');
+    $('#loginUser').value = u; $('#loginPass').value = '';
+  }catch(ex){
+    err.textContent = ex.message || '重置失败，请稍后再试';
   }finally{
     btn.disabled = false; btn.textContent = old;
   }
@@ -2098,11 +2190,61 @@ function openProfileModal(){
   _profAvatar = null;
   $('#profAva').innerHTML = p.avatar ? '<img src="' + p.avatar + '" alt="头像">' : '<img src="logo.jpeg" alt="默认头像">';
   $('#profErr').textContent = '';
+  /* 密保邮箱：回显绑定状态 */
+  const bound = (SESSION && SESSION.email) || '';
+  $('#profEmail').value = '';
+  $('#profEmail').placeholder = bound ? '已绑定 ' + bound + '，输入新邮箱可更换' : '未绑定，绑定后可自助找回密码';
+  $('#profEmailNow').textContent = bound ? '当前绑定：' + bound : '';
+  $('#profEmailCode').value = '';
   $('#profMask').classList.remove('hidden');
 }
 $('#brand').addEventListener('click', openProfileModal);
 $('#mobileAccount').addEventListener('click', openProfileModal);
 $('#profCancel').addEventListener('click', () => $('#profMask').classList.add('hidden'));
+
+/* 密保邮箱绑定：登录态下先发验证码到新邮箱，再凭码绑定 */
+$('#profEmailSend').addEventListener('click', async () => {
+  const btn = $('#profEmailSend');
+  const em = $('#profEmail').value.trim();
+  const err = $('#profErr'), hint = $('#profEmailNow');
+  err.textContent = '';
+  if (_guest){ err.textContent = '游客模式不支持绑定邮箱'; return; }
+  if (!em){ err.textContent = '请先输入要绑定的邮箱'; return; }
+  btn.disabled = true; const old = btn.textContent; btn.textContent = '发送中…';
+  try{
+    const r = await api('sendEmailCode', { purpose: 'bind', email: em });
+    hint.textContent = '验证码已发送至 ' + r.email + '，10 分钟内有效';
+    startCodeCountdown(btn);
+  }catch(ex){
+    btn.disabled = false; btn.textContent = old;
+    if (ex.needAuth){ sessionExpired(); return; }
+    err.textContent = ex.message || '发送失败，请稍后再试';
+  }
+});
+$('#profEmailBind').addEventListener('click', async () => {
+  const btn = $('#profEmailBind');
+  const em = $('#profEmail').value.trim();
+  const code = $('#profEmailCode').value.trim();
+  const err = $('#profErr'), hint = $('#profEmailNow');
+  err.textContent = '';
+  if (_guest){ err.textContent = '游客模式不支持绑定邮箱'; return; }
+  if (!em || !code){ err.textContent = '请输入邮箱和验证码'; return; }
+  btn.disabled = true; const old = btn.textContent; btn.textContent = '绑定中…';
+  try{
+    const r = await api('bindEmail', { email: em, code: code });
+    SESSION.email = r.email; saveSession(SESSION);
+    hint.textContent = '已绑定：' + r.email;
+    $('#profEmail').value = '';
+    $('#profEmail').placeholder = '已绑定 ' + r.email + '，输入新邮箱可更换';
+    $('#profEmailCode').value = '';
+    toast('密保邮箱绑定成功');
+  }catch(ex){
+    if (ex.needAuth){ sessionExpired(); return; }
+    err.textContent = ex.message || '绑定失败，请稍后再试';
+  }finally{
+    btn.disabled = false; btn.textContent = old;
+  }
+});
 $('#profForm').addEventListener('submit', async e => {
   e.preventDefault();
   const name = $('#profName').value.trim() || DEFAULT_PROFILE.name;
@@ -2124,6 +2266,7 @@ $('#profForm').addEventListener('submit', async e => {
     if (_profAvatar !== null) body.avatar = _profAvatar;
     const r = await api('updateProfile', body);
     SESSION.name = r.profile.name; SESSION.sub = r.profile.sub; SESSION.avatar = r.profile.avatar;
+    if (r.profile.email) SESSION.email = r.profile.email;
     saveSession(SESSION); applyProfile();
     $('#profMask').classList.add('hidden');
     toast('资料已更新');
@@ -2153,7 +2296,7 @@ $('#profLogout').addEventListener('click', async () => {
   if (SESSION && SESSION.token){
     try{
       const r = await api('me'); /* 验活：过期/被吊销就直接回账号门 */
-      SESSION.name = r.profile.name; SESSION.sub = r.profile.sub; SESSION.avatar = r.profile.avatar;
+      SESSION.name = r.profile.name; SESSION.sub = r.profile.sub; SESSION.avatar = r.profile.avatar; SESSION.email = r.profile.email || '';
       saveSession(SESSION);
       enterApp();
       return;

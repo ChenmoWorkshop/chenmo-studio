@@ -53,6 +53,7 @@
 
 - 注册 / 登录 / 退出，账号规则同微信号：6–20 位、字母开头，只能含字母、数字、下划线、中划线
 - 密码用 `scrypt` 加随机盐派生，不存明文；比对走恒定时间算法
+- **密保邮箱 + 自助找回密码**：绑定邮箱后，忘记密码可用邮箱验证码自助重置（免费 SMTP 发信，不依赖短信）；重置后全部旧登录态失效
 - 登录下发 90 天 token，二次打开自动免登录
 - **数据按账号隔离**：每个账号只查得到自己的内容
 - 可自定义工作台名称、副标题与头像（图片本地压缩到 256×256 再上传）
@@ -86,7 +87,9 @@
 CloudBase 文档数据库
    ├── workbench_state   业务数据，_id = <uid>__<key>
    ├── chenmo_users      账号，_id = 账号名（小写，天然唯一）
-   └── chenmo_sessions   登录会话，_id = token，有效期 90 天
+   ├── chenmo_sessions   登录会话，_id = token，有效期 90 天
+   ├── chenmo_wxbind     微信绑定关系，_id = openid
+   └── chenmo_verify     邮箱验证码（只存 sha256 哈希），_id = 用途__账号
 ```
 
 **为什么用云函数代理，而不是前端直连 JS SDK？**
@@ -100,6 +103,8 @@ CloudBase 文档数据库
 | `ping` 健康检查 | `loadAll` 读取当前账号全部数据 |
 | `getDayQuotes` / `getQuote` 每日名言 | `save` 保存某个模块 |
 | `register` / `login` 换 token | `importAll` 批量导入 |
+| `sendEmailCode`（reset）找回密码发码 | `sendEmailCode`（bind）绑定邮箱发码 |
+| `resetPassword` 凭邮箱验证码重置密码 | `bindEmail` 绑定/换绑密保邮箱 |
 | | `me` 校验登录态 / `logout` 退出 / `updateProfile` 改资料 |
 
 鉴权失败统一返回 **HTTP 200 + `{ok:false, needAuth:true}`**，而不是 401——跨域场景下前端读不到 401 响应体的语义。

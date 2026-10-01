@@ -67,3 +67,42 @@
 .demo-note {
   margin-top: 48rpx;
 }
+
+/* 验证码行 / 忘记密码 / 发送提示 */
+.code-row {
+  display: flex;
+  gap: 12rpx;
+  align-items: center;
+}
+.code-row .grow {
+  flex: 1;
+  min-width: 0;
+}
+.code-btn {
+  flex-shrink: 0;
+  padding: 0 22rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 14rpx;
+  background: #f0e9db;
+  border: 2rpx solid #e0d5c0;
+  color: #4a4136;
+  font-size: 24rpx;
+  white-space: nowrap;
+}
+.code-btn.dis {
+  opacity: 0.55;
+}
+.forgot {
+  margin-top: 14rpx;
+  text-align: right;
+  font-size: 24rpx;
+  color: #938a7c;
+  text-decoration: underline;
+}
+.hint {
+  margin-top: 14rpx;
+  font-size: 24rpx;
+  color: #4a7c5e;
+  line-height: 1.5;
+}

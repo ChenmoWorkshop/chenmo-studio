@@ -40,6 +40,23 @@ function save(key, items) { return cloud.call('save', { key: key, items: items }
 /* —— 资料 —— */
 function updateProfile(patch) { return cloud.call('updateProfile', patch); }
 
+/* —— 密保邮箱（找回密码 / 换绑） —— */
+/* 发验证码：bind 需登录态 + email；reset 只需账号名（验证码发到该账号绑定的邮箱） */
+function sendEmailCode(purpose, email, user) {
+  var payload = { purpose: purpose };
+  if (purpose === 'bind') payload.email = email || '';
+  else payload.user = user || '';
+  return cloud.call('sendEmailCode', payload, purpose === 'bind' ? {} : { noAuth: true });
+}
+
+function bindEmail(email, code) {
+  return cloud.call('bindEmail', { email: email, code: code });
+}
+
+function resetPassword(user, code, pass) {
+  return cloud.call('resetPassword', { user: user, code: code, pass: pass }, { noAuth: true });
+}
+
 module.exports = {
   wxLogin: wxLogin,
   wxBind: wxBind,
@@ -49,5 +66,8 @@ module.exports = {
   logout: logout,
   loadAll: loadAll,
   save: save,
-  updateProfile: updateProfile
+  updateProfile: updateProfile,
+  sendEmailCode: sendEmailCode,
+  bindEmail: bindEmail,
+  resetPassword: resetPassword
 };

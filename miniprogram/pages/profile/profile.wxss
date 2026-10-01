@@ -59,3 +59,44 @@
   color: #c4604a;
   border-color: #c4604a;
 }
+
+/* 密保邮箱绑定 */
+.code-row {
+  display: flex;
+  gap: 12rpx;
+  align-items: center;
+  margin-top: 16rpx;
+}
+.code-row .grow {
+  flex: 1;
+  min-width: 0;
+}
+.code-btn {
+  flex-shrink: 0;
+  padding: 0 22rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  border-radius: 14rpx;
+  background: #f0e9db;
+  border: 2rpx solid #e0d5c0;
+  color: #4a4136;
+  font-size: 24rpx;
+  white-space: nowrap;
+}
+.code-btn.dis {
+  opacity: 0.55;
+}
+.hint {
+  margin-top: 14rpx;
+  font-size: 24rpx;
+  color: #4a7c5e;
+  line-height: 1.5;
+}
+.err {
+  margin-top: 14rpx;
+  color: #c4604a;
+  font-size: 26rpx;
+}
+.second {
+  margin-top: 20rpx;
+}

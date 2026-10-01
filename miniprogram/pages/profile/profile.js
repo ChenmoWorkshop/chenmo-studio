@@ -1,4 +1,5 @@
 const app = getApp();
+const api = require('../../utils/api.js');
 
 Page({
   data: {
@@ -7,11 +8,22 @@ Page({
     bound: false,
     mode: 'guest',
     syncNote: '',
-    busy: false
+    busy: false,
+    /* 密保邮箱 */
+    emailMask: '',
+    emailEditing: false,
+    emailInput: '',
+    emailCode: '',
+    emailSent: '',
+    emailErr: '',
+    emailCount: 0
   },
 
   onLoad: function () { this.render(); },
   onShow: function () { this.render(); },
+  onUnload: function () {
+    if (this._ct) { clearInterval(this._ct); this._ct = null; }
+  },
 
   render: function () {
     this.setData({
@@ -19,7 +31,8 @@ Page({
       account: app.globalData.account || '',
       bound: !!app.globalData.bound,
       mode: app.globalData.mode,
-      syncNote: app.globalData.syncNote || ''
+      syncNote: app.globalData.syncNote || '',
+      emailMask: (app.profile() && app.profile().email) || ''
     });
   },
 
@@ -66,6 +79,62 @@ Page({
         return;
       }
       app.toast(r.error || '保存失败');
+    });
+  },
+
+  /* —— 密保邮箱绑定 —— */
+  startEmailEdit: function () {
+    this.setData({ emailEditing: true, emailInput: '', emailCode: '', emailSent: '', emailErr: '' });
+  },
+  cancelEmailEdit: function () {
+    this._stopCount();
+    this.setData({ emailEditing: false, emailErr: '' });
+  },
+  onEmailInput: function (e) { this.setData({ emailInput: e.detail.value, emailErr: '' }); },
+  onEmailCode: function (e) { this.setData({ emailCode: e.detail.value, emailErr: '' }); },
+  _stopCount: function () {
+    if (this._ct) { clearInterval(this._ct); this._ct = null; }
+  },
+
+  sendEmailCodeTap: function () {
+    if (this.data.emailCount > 0) return;
+    const em = this.data.emailInput.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) {
+      this.setData({ emailErr: '请输入正确的邮箱地址' });
+      return;
+    }
+    const self = this;
+    this.setData({ emailErr: '' });
+    api.sendEmailCode('bind', em).then((r) => {
+      if (!r.ok) { self.setData({ emailErr: r.error || '发送失败，请稍后再试' }); return; }
+      self.setData({ emailSent: '验证码已发送至 ' + r.email + '，10 分钟内有效' });
+      let s = 60;
+      self.setData({ emailCount: s });
+      self._ct = setInterval(function () {
+        s--;
+        if (s <= 0) { self._stopCount(); self.setData({ emailCount: 0 }); }
+        else self.setData({ emailCount: s });
+      }, 1000);
+    });
+  },
+
+  confirmBind: function () {
+    if (this.data.busy) return;
+    const em = this.data.emailInput.trim();
+    const code = this.data.emailCode.trim();
+    if (!em || !code) { this.setData({ emailErr: '请输入邮箱和验证码' }); return; }
+    const self = this;
+    this.setData({ busy: true, emailErr: '' });
+    api.bindEmail(em, code).then((r) => {
+      self.setData({ busy: false });
+      if (r.ok) {
+        self._stopCount();
+        app.toast('密保邮箱绑定成功');
+        if (app.profile()) app.profile().email = r.email;
+        self.setData({ emailEditing: false, emailMask: r.email, emailSent: '', emailCode: '' });
+        return;
+      }
+      self.setData({ emailErr: r.error || '绑定失败，请稍后再试' });
     });
   },
 

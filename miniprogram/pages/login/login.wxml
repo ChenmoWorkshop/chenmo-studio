@@ -14,6 +14,24 @@
       <view class="err" wx:if="{{err}}">{{err}}</view>
     </block>
 
+    <block wx:elif="{{resetMode}}">
+      <view class="card-h"><text class="ico">✉️</text>找回密码</view>
+      <view class="muted tip">验证码会发送到账号绑定的密保邮箱；没有绑定邮箱的账号请联系作者重置。</view>
+      <view class="field-label">账号</view>
+      <input class="input" value="{{rUser}}" placeholder="你的用户名" bindinput="onRUser" />
+      <view class="field-label">邮箱验证码</view>
+      <view class="code-row">
+        <input class="input grow" value="{{rCode}}" placeholder="6 位验证码" bindinput="onRCode" />
+        <view class="code-btn {{rCount > 0 ? 'dis' : ''}}" bindtap="onResetSend">{{rCount > 0 ? rCount + 's 后重发' : '发送验证码'}}</view>
+      </view>
+      <view class="field-label">新密码</view>
+      <input class="input" password value="{{rPass}}" placeholder="至少 6 位" bindinput="onRPass" />
+      <view class="hint" wx:if="{{rSent}}">{{rSent}}</view>
+      <view class="err" wx:if="{{rErr}}">{{rErr}}</view>
+      <view class="btn block submit {{busy ? 'dis' : ''}}" bindtap="onResetSubmit">{{busy ? '处理中…' : '重置密码'}}</view>
+      <view class="btn ghost block second" bindtap="backToWx">返回登录</view>
+    </block>
+
     <block wx:else>
       <view class="card-h"><text class="ico">🔐</text>{{bindMode ? '绑定已有账号' : '账号密码登录'}}</view>
       <view class="muted tip" wx:if="{{bindMode}}">这一步只是把微信和你的账号关联起来，密码只用于校验，不会保存到手机。</view>
@@ -21,6 +39,7 @@
       <input class="input" value="{{user}}" placeholder="例如 ChenMo" bindinput="onUser" />
       <view class="field-label">密码</view>
       <input class="input" password value="{{pass}}" placeholder="请输入密码" bindinput="onPass" />
+      <view class="forgot" bindtap="showReset">忘记密码？</view>
       <view class="err" wx:if="{{err}}">{{err}}</view>
       <view class="btn block submit {{busy ? 'dis' : ''}}" bindtap="onSubmit">{{busy ? '处理中…' : (bindMode ? '绑定并进入' : '登录')}}</view>
       <view class="btn ghost block second" bindtap="backToWx">返回微信登录</view>

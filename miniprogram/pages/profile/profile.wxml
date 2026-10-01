@@ -43,5 +43,27 @@
     <view class="btn ghost block logout" bindtap="logout">退出登录</view>
   </view>
 
+  <view class="card" wx:if="{{mode === 'cloud'}}">
+    <view class="card-h"><text class="ico">✉️</text>密保邮箱</view>
+    <view class="muted tip">绑定后忘记密码可自助用邮箱验证码找回，网页版与小程序通用。</view>
+    <view class="acc-row">
+      <text class="k">当前绑定</text>
+      <text class="v">{{emailMask || '未绑定'}}</text>
+    </view>
+    <block wx:if="{{emailEditing}}">
+      <view class="field-label">邮箱地址</view>
+      <input class="input" value="{{emailInput}}" placeholder="例如 you@qq.com" bindinput="onEmailInput" />
+      <view class="code-row">
+        <input class="input grow" value="{{emailCode}}" placeholder="6 位验证码" bindinput="onEmailCode" />
+        <view class="code-btn {{emailCount > 0 ? 'dis' : ''}}" bindtap="sendEmailCodeTap">{{emailCount > 0 ? emailCount + 's 后重发' : '发送验证码'}}</view>
+      </view>
+      <view class="hint" wx:if="{{emailSent}}">{{emailSent}}</view>
+      <view class="err" wx:if="{{emailErr}}">{{emailErr}}</view>
+      <view class="btn block submit {{busy ? 'dis' : ''}}" bindtap="confirmBind">确认绑定</view>
+      <view class="btn ghost block second" bindtap="cancelEmailEdit">取消</view>
+    </block>
+    <view class="btn ghost block second" wx:else bindtap="startEmailEdit">{{emailMask ? '更换邮箱' : '绑定邮箱'}}</view>
+  </view>
+
   <view class="muted demo-note">{{syncNote || '头像与资料保存在你的账号里，网页版与小程序共用同一份。'}}</view>
 </view>

@@ -1,16 +1,24 @@
 const app = getApp();
+const api = require('../../utils/api.js');
 
 Page({
   data: {
     profile: {},
     showForm: false,
     bindMode: true,     /* true=首次绑定，false=纯账号密码登录 */
+    resetMode: false,   /* 忘记密码：验证码发到密保邮箱 */
     user: '',
     pass: '',
     err: '',
     busy: false,
     note: '',
-    account: ''
+    account: '',
+    /* 找回密码 */
+    rUser: '',
+    rCode: '',
+    rPass: '',
+    rSent: '',
+    rCount: 0
   },
 
   onLoad: function () {
@@ -27,6 +35,8 @@ Page({
     });
   },
 
+  onUnload: function () { this._stopCount(); },
+
   /* 微信一键登录 */
   onWxLogin: function () {
     if (this.data.busy) return;
@@ -36,7 +46,7 @@ Page({
       if (r.ok && r.bound) { app.toast('欢迎回来'); self.enter(); return; }
       if (r.ok && !r.bound) {
         self.setData({
-          busy: false, showForm: true, bindMode: true,
+          busy: false, showForm: true, bindMode: true, resetMode: false,
           err: r.error || '这个微信还没绑定账号，输入一次账号密码即可绑定'
         });
         return;
@@ -47,15 +57,70 @@ Page({
 
   showPwd: function () {
     if (this.data.busy) return;
-    this.setData({ showForm: true, bindMode: false, err: '' });
+    this.setData({ showForm: true, bindMode: false, resetMode: false, err: '' });
+  },
+
+  showReset: function () {
+    if (this.data.busy) return;
+    this.setData({ showForm: true, resetMode: true, err: '', rErr: '', rUser: this.data.user });
   },
 
   backToWx: function () {
-    this.setData({ showForm: false, err: '' });
+    this._stopCount();
+    this.setData({ showForm: false, resetMode: false, err: '' });
   },
 
   onUser: function (e) { this.setData({ user: e.detail.value, err: '' }); },
   onPass: function (e) { this.setData({ pass: e.detail.value, err: '' }); },
+
+  /* —— 找回密码 —— */
+  onRUser: function (e) { this.setData({ rUser: e.detail.value, rErr: '' }); },
+  onRCode: function (e) { this.setData({ rCode: e.detail.value, rErr: '' }); },
+  onRPass: function (e) { this.setData({ rPass: e.detail.value, rErr: '' }); },
+
+  _stopCount: function () {
+    if (this._ct) { clearInterval(this._ct); this._ct = null; }
+  },
+
+  onResetSend: function () {
+    if (this.data.rCount > 0) return;
+    const u = this.data.rUser.trim();
+    if (!u) { this.setData({ rErr: '请先输入账号' }); return; }
+    const self = this;
+    this.setData({ rErr: '' });
+    api.sendEmailCode('reset', '', u).then((r) => {
+      if (!r.ok) { self.setData({ rErr: r.error || '发送失败，请稍后再试' }); return; }
+      self.setData({ rSent: '验证码已发送至 ' + r.email + '，10 分钟内有效' });
+      let s = 60;
+      self.setData({ rCount: s });
+      self._ct = setInterval(function () {
+        s--;
+        if (s <= 0) { self._stopCount(); self.setData({ rCount: 0 }); }
+        else self.setData({ rCount: s });
+      }, 1000);
+    });
+  },
+
+  onResetSubmit: function () {
+    if (this.data.busy) return;
+    const u = this.data.rUser.trim();
+    const code = this.data.rCode.trim();
+    const p = this.data.rPass;
+    if (!u) { this.setData({ rErr: '请输入账号' }); return; }
+    if (p.length < 6) { this.setData({ rErr: '新密码至少 6 位' }); return; }
+    const self = this;
+    this.setData({ busy: true, rErr: '' });
+    api.resetPassword(u, code, p).then((r) => {
+      self.setData({ busy: false });
+      if (r.ok) {
+        self._stopCount();
+        app.toast('密码已重置，请用新密码登录');
+        self.setData({ resetMode: false, bindMode: false, user: u, pass: '', rErr: '', rSent: '' });
+        return;
+      }
+      self.setData({ rErr: r.error || '重置失败，请稍后再试' });
+    });
+  },
 
   onSubmit: function () {
     if (this.data.busy) return;

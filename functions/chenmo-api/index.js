@@ -10,6 +10,7 @@ const COL = 'workbench_state';
 const USERS_COL = 'chenmo_users';      /* 账号：_id = 小写账号名 */
 const SESS_COL = 'chenmo_sessions';    /* 会话：_id = token */
 const WXBIND_COL = 'chenmo_wxbind';    /* 微信绑定：_id = openid，值 = { uid } */
+const VERIFY_COL = 'chenmo_verify';    /* 邮箱验证码：_id = purpose:uid，purpose = bind / reset */
 const KEYS = ['todos', 'ideas', 'contents', 'reviews'];
 const LEGACY_UID = 'chenmo';           /* 加账号前的老数据归属：首个账号自动继承 */
 const TOKEN_TTL = 90 * 24 * 3600 * 1000; /* 登录态 90 天 */
@@ -330,6 +331,94 @@ function safeEq(a, b) {
 }
 function docId(uid, key) { return uid + '__' + key; }
 
+/* ============ 密保邮箱：验证码 + 免费 SMTP 发信 ============
+   为什么不用短信：国内短信需签名/模板报备审核（个人主体要绑定已上线的小程序/网站，
+   备案前办不下来）；邮件走 QQ 邮箱免费 SMTP，零费用，找回密码这种低频场景足够。
+   SMTP 参数全部走函数环境变量：SMTP_USER / SMTP_PASS（QQ 邮箱授权码），
+   可选 SMTP_HOST / SMTP_PORT（默认 smtp.qq.com:465 SSL）。 */
+const CODE_TTL = 10 * 60 * 1000;         /* 验证码 10 分钟有效 */
+const CODE_SEND_COOLDOWN = 60 * 1000;    /* 同一目标 60 秒最多一条 */
+const CODE_DAILY_LIMIT = 5;              /* 同一目标每天最多 5 条 */
+const CODE_MAX_ATTEMPTS = 5;             /* 验证码最多试错 5 次 */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+function smtpReady() { return !!(process.env.SMTP_USER && process.env.SMTP_PASS); }
+let _transport = null;
+async function sendMail(to, subject, text) {
+  const nodemailer = require('nodemailer');
+  if (!_transport) {
+    _transport = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.qq.com',
+      port: Number(process.env.SMTP_PORT || 465),
+      secure: true,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+    });
+  }
+  await _transport.sendMail({
+    from: '"尘墨工坊" <' + process.env.SMTP_USER + '>',
+    to: to, subject: subject, text: text
+  });
+}
+
+function maskEmail(em) {
+  const s = String(em || '');
+  const at = s.indexOf('@');
+  if (at < 1) return s;
+  const name = s.slice(0, at);
+  return (name.length <= 2 ? name[0] + '*' : name.slice(0, 2) + '*'.repeat(Math.min(name.length - 2, 3))) + s.slice(at);
+}
+function sha256(s) { return crypto.createHash('sha256').update(String(s)).digest('hex'); }
+
+/* 生成并下发验证码：限频、限次，落库的是 sha256 哈希而非明文 */
+async function issueEmailCode(db, purpose, uid, email, title) {
+  const id = purpose + '__' + uid;
+  const v = await getDoc(db, VERIFY_COL, id);
+  const now = Date.now();
+  if (v && v.last_send && now - v.last_send < CODE_SEND_COOLDOWN) {
+    throw new Error('发送太频繁，请 ' + Math.ceil((CODE_SEND_COOLDOWN - (now - v.last_send)) / 1000) + ' 秒后再试');
+  }
+  const today = todayCN();
+  const sentToday = (v && v.day === today) ? (v.sent_today || 0) : 0;
+  if (sentToday >= CODE_DAILY_LIMIT) throw new Error('今天的验证码发送次数已达上限，请明天再试');
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  await db.collection(VERIFY_COL).doc(id).set({
+    purpose: purpose, uid: uid, email: email,
+    code_hash: sha256(code + '__' + uid),
+    exp: now + CODE_TTL, attempts: 0,
+    day: today, sent_today: sentToday + 1, last_send: now
+  });
+  try {
+    await sendMail(email, '尘墨工坊 · ' + title,
+      '你的验证码是：' + code + '\n\n10 分钟内有效，请勿泄露给他人。\n如果不是你本人操作，请忽略本邮件。\n\n—— 尘墨工坊');
+  } catch (e) {
+    try { await db.collection(VERIFY_COL).doc(id).remove(); } catch (e2) {}
+    throw new Error('邮件发送失败，请稍后再试');
+  }
+}
+
+/* 校验验证码：过期/超次/不符都拒绝；通过后立即作废 */
+async function checkEmailCode(db, purpose, uid, code) {
+  const id = purpose + '__' + uid;
+  const v = await getDoc(db, VERIFY_COL, id);
+  if (!v || !v.code_hash) throw new Error('请先获取验证码');
+  if (Date.now() > v.exp) throw new Error('验证码已过期，请重新获取');
+  if ((v.attempts || 0) >= CODE_MAX_ATTEMPTS) throw new Error('错误次数过多，请重新获取验证码');
+  if (!safeEq(v.code_hash, sha256(String(code || '').trim() + '__' + uid))) {
+    try { await db.collection(VERIFY_COL).doc(id).update({ attempts: (v.attempts || 0) + 1 }); } catch (e) {}
+    throw new Error('验证码不对');
+  }
+  try { await db.collection(VERIFY_COL).doc(id).remove(); } catch (e) {}
+}
+
+/* 邮箱是否已被其他账号绑定 */
+async function emailTaken(db, em, exceptUid) {
+  try {
+    const r = await db.collection(USERS_COL).where({ email: em }).limit(5).get();
+    const list = (r.data || []).filter(function (d) { return d && d.uid && d.uid !== exceptUid; });
+    return list.length > 0;
+  } catch (e) { return false; }
+}
+
 /* 取单文档：SDK 在文档不存在时会抛错，这里统一吞掉返回 null */
 async function getDoc(db, col, id) {
   try {
@@ -343,7 +432,11 @@ async function getDoc(db, col, id) {
 async function getUser(db, uid) { return getDoc(db, USERS_COL, uid); }
 
 function publicProfile(u) {
-  return { user: u.user, name: u.name || '我的工作台', sub: u.sub || '灵感 · 进度 · 复盘', avatar: u.avatar || '' };
+  return {
+    user: u.user, name: u.name || '我的工作台', sub: u.sub || '灵感 · 进度 · 复盘',
+    avatar: u.avatar || '',
+    email: u.email ? maskEmail(u.email) : ''   /* 掩码显示，仅用于前端回显绑定状态 */
+  };
 }
 
 async function issueToken(db, uid) {
@@ -518,6 +611,59 @@ async function handle(event) {
       await db.collection(USERS_COL).doc(a.uid).update(patch);
       const u = await getUser(db, a.uid);
       return resp(200, headers, { ok: true, profile: publicProfile(u || a.user) });
+    }
+
+    /* ---------- 邮箱验证码：绑定密保邮箱 / 找回密码 ---------- */
+    if (action === 'sendEmailCode') {
+      if (!smtpReady()) return resp(200, headers, { ok: false, error: '邮件服务未配置，请联系作者' });
+      const purpose = body.purpose === 'bind' ? 'bind' : 'reset';
+      let uid, email, title;
+      if (purpose === 'bind') {
+        const a = await authUser(db, body.token);
+        if (!a) return resp(200, headers, { ok: false, needAuth: true, error: '登录已过期，请重新登录' });
+        email = String(body.email || '').trim().toLowerCase();
+        if (!EMAIL_RE.test(email)) return resp(200, headers, { ok: false, error: '邮箱格式不对' });
+        if (await emailTaken(db, email, a.uid)) return resp(200, headers, { ok: false, error: '该邮箱已被其他账号绑定' });
+        uid = a.uid; title = '绑定邮箱验证码';
+      } else {
+        uid = uidOf(body.user);
+        const u = await getUser(db, uid);
+        if (!u) return resp(200, headers, { ok: false, error: '账号不存在' });
+        if (!u.email) return resp(200, headers, { ok: false, error: '该账号没有绑定邮箱，暂时无法自助找回，请联系作者重置密码' });
+        email = String(u.email); title = '找回密码验证码';
+      }
+      try { await issueEmailCode(db, purpose, uid, email, title); }
+      catch (e) { return resp(200, headers, { ok: false, error: String((e && e.message) || e) }); }
+      return resp(200, headers, { ok: true, email: maskEmail(email) });
+    }
+
+    if (action === 'bindEmail') {
+      const a = await authUser(db, body.token);
+      if (!a) return resp(200, headers, { ok: false, needAuth: true, error: '登录已过期，请重新登录' });
+      const email = String(body.email || '').trim().toLowerCase();
+      if (!EMAIL_RE.test(email)) return resp(200, headers, { ok: false, error: '邮箱格式不对' });
+      if (await emailTaken(db, email, a.uid)) return resp(200, headers, { ok: false, error: '该邮箱已被其他账号绑定' });
+      try { await checkEmailCode(db, 'bind', a.uid, body.code); }
+      catch (e) { return resp(200, headers, { ok: false, error: String((e && e.message) || e) }); }
+      await db.collection(USERS_COL).doc(a.uid).update({ email: email, updated_at: new Date().toISOString() });
+      return resp(200, headers, { ok: true, email: maskEmail(email) });
+    }
+
+    if (action === 'resetPassword') {
+      const uid = uidOf(body.user);
+      const u = await getUser(db, uid);
+      if (!u || !u.email) return resp(200, headers, { ok: false, error: '账号不存在或未绑定邮箱' });
+      const pass = String(body.pass || '');
+      if (pass.length < 6) return resp(200, headers, { ok: false, error: '新密码至少 6 位' });
+      try { await checkEmailCode(db, 'reset', uid, body.code); }
+      catch (e) { return resp(200, headers, { ok: false, error: String((e && e.message) || e) }); }
+      const salt = newSalt();
+      await db.collection(USERS_COL).doc(uid).update({
+        salt: salt, hash: hashOf(pass, salt), updated_at: new Date().toISOString()
+      });
+      /* 密码已变，吊销该账号全部旧会话，各端需重新登录 */
+      try { await db.collection(SESS_COL).where({ uid: uid }).remove(); } catch (e) {}
+      return resp(200, headers, { ok: true });
     }
 
     /* ---------- 以下为数据读写：必须带有效 token ---------- */
