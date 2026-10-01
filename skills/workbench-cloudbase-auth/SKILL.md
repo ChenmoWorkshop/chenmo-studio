@@ -148,6 +148,26 @@ if (_guest){ applyMap(DEMO_SAMPLE); _cloudReady = false; syncState('saved'); /* 
 - 仓库 README 里"数据对所有人开放读写"的描述此时已经**过时**，要同步更新
 - 原集合权限若还是"读写全开"，现在所有读写都走云函数（管理员权限），可考虑收紧
 
+## 五、开源 / 公开部署前（关键，别漏）
+
+加了账号体系之后，**前端里的云函数访问地址依然是公开的**——页面必须能调它，藏不住。所以：
+
+- `loadAll` / `save` 有 token 保护，**但 `register` 是无门槛的写入口**。任何人扫到地址就能批量建号，撑大账号表、刷空免费资源点；免费版超量是**直接停服**（不扣费、也无法临时加钱），届时作者自己也打不开。
+- 解法是加一个部署级开关，**默认关闭注册**：
+
+```js
+const ALLOW_REGISTER = false;            // 源码里默认 false
+// register 分支最前面：
+if (!ALLOW_REGISTER) {
+  return resp(200, headers, { ok: false, error: '该环境未开放自助注册（作者已关闭公开注册）' });
+}
+```
+
+- 要给朋友开号时：临时改 `true` → 部署 → 对方注册完 → 改回 `false` → 再部署。**不要图省事常年开着。**
+- **CORS 白名单不是安全边界**，它只拦浏览器，`curl` / Postman 不受限。真正的防护是 token 校验。
+- 公开仓库前扫一遍源码：`grep -i -E "密码明文|secretkey|secretid|cwb_demo|BUILTIN"`，确认没有测试账号、演示分支、明文凭据残留。
+- 换域名或换人部署时，记得 `ALLOW_ORIGINS` 要加新域名（可写成"放行某个域名后缀"以减少后续改动）。
+
 ## 常见坑
 
 - 部署云函数用 MCP `manageFunctions(action=updateFunctionCode, functionRootPath=functions父目录)`；`tcb fn deploy` 常报成功但代码不更新
