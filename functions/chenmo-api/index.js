@@ -3,10 +3,28 @@
    因此由本函数代为读写数据库：函数本身运行在 CloudBase 内，拥有管理员权限，
    并按需下发 CORS 头，让 WorkBuddy 域名可以跨域调用。 */
 const cloudbase = require('@cloudbase/node-sdk');
+const crypto = require('crypto');
 
 const ENV = 'chenmo-d9gcmpopbed61c597';
 const COL = 'workbench_state';
+const USERS_COL = 'chenmo_users';      /* 账号：_id = 小写账号名 */
+const SESS_COL = 'chenmo_sessions';    /* 会话：_id = token */
 const KEYS = ['todos', 'ideas', 'contents', 'reviews'];
+const LEGACY_UID = 'chenmo';           /* 加账号前的老数据归属：首个账号自动继承 */
+const TOKEN_TTL = 90 * 24 * 3600 * 1000; /* 登录态 90 天 */
+
+/* ── 自助注册开关 ──────────────────────────────────────────────────────
+   为什么默认关闭：本仓库 index.html 里硬编码了作者自己的云函数访问地址，
+   环境标识是公开的。一旦开放自助注册，任何人扫到这个地址都能批量建号，
+   把账号表撑大、把免费资源点刷空——体验版超量会直接停服（不扣费也无法加钱），
+   届时作者自己和所有真实用户一起打不开。
+
+   需要给朋友开号时：
+     1. 把 ALLOW_REGISTER 改成 true，重新部署本函数
+     2. 让对方完成注册
+     3. 改回 false，再部署一次
+   ──────────────────────────────────────────────────────────────────── */
+const ALLOW_REGISTER = false;
 const DOC_IDS = {
   todos:    '00000000c0ffee0000000001',
   ideas:    '00000000c0ffee0000000002',
@@ -280,6 +298,73 @@ function quoteIndexAt(dayKey, slot) {
   return ((dayKey * 10 + slot) % QUOTES.length + QUOTES.length) % QUOTES.length;
 }
 
+/* ============ 账号体系：加盐哈希 + 会话 token ============ */
+function uidOf(user) { return String(user || '').trim().toLowerCase(); }
+function newSalt() { return crypto.randomBytes(16).toString('hex'); }
+function hashOf(pass, salt) { return crypto.scryptSync(String(pass), salt, 32).toString('hex'); }
+function safeEq(a, b) {
+  const A = Buffer.from(String(a || ''));
+  const B = Buffer.from(String(b || ''));
+  return A.length === B.length && A.length > 0 && crypto.timingSafeEqual(A, B);
+}
+function docId(uid, key) { return uid + '__' + key; }
+
+/* 取单文档：SDK 在文档不存在时会抛错，这里统一吞掉返回 null */
+async function getDoc(db, col, id) {
+  try {
+    const r = await db.collection(col).doc(id).get();
+    let d = (r.data && (r.data[0] || r.data)) || null;
+    if (Array.isArray(d)) d = d[0] || null;
+    return d || null;
+  } catch (e) { return null; }
+}
+
+async function getUser(db, uid) { return getDoc(db, USERS_COL, uid); }
+
+function publicProfile(u) {
+  return { user: u.user, name: u.name || '我的工作台', sub: u.sub || '灵感 · 进度 · 复盘', avatar: u.avatar || '' };
+}
+
+async function issueToken(db, uid) {
+  const t = crypto.randomBytes(24).toString('hex');
+  await db.collection(SESS_COL).doc(t).set({
+    uid: uid, exp: Date.now() + TOKEN_TTL, created_at: new Date().toISOString()
+  });
+  return t;
+}
+
+/* 校验 token → 返回 { uid, user }；无效/过期返回 null */
+async function authUser(db, token) {
+  if (!token) return null;
+  const s = await getDoc(db, SESS_COL, String(token));
+  if (!s || !s.uid) return null;
+  if (s.exp && Date.now() > s.exp) return null;
+  const u = await getUser(db, s.uid);
+  return u ? { uid: s.uid, user: u } : null;
+}
+
+/* 加账号前的老数据（无 uid 字段）：仅 LEGACY_UID 首次登录时继承一份副本，原文档保留不动 */
+async function readLegacy(db) {
+  const out = {};
+  for (let i = 0; i < KEYS.length; i++) {
+    const d = await getDoc(db, COL, DOC_IDS[KEYS[i]]);
+    if (d && Array.isArray(d.items)) out[KEYS[i]] = d.items;
+  }
+  return out;
+}
+async function claimLegacy(db, uid) {
+  const legacy = await readLegacy(db);
+  const keys = Object.keys(legacy);
+  if (!keys.length) return {};
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    await db.collection(COL).doc(docId(uid, k)).set({
+      uid: uid, key: k, items: legacy[k], updated_at: new Date().toISOString()
+    });
+  }
+  return legacy;
+}
+
 exports.main = async function (event) {
   const hd = event.headers || {};
   const origin = hd.origin || hd.Origin || '';
@@ -295,40 +380,118 @@ exports.main = async function (event) {
     const db = app().database();
 
     if (action === 'ping') {
-      return resp(200, headers, { ok: true, pong: true, env: ENV });
+      return resp(200, headers, { ok: true, pong: true, env: ENV, auth: true });
     }
 
-    if (action === 'loadAll') {
-      const res = await db.collection(COL).limit(100).get();
-      const map = {};
-      (res.data || []).forEach(function (d) { map[d.key] = d.items; });
-      const out = {};
-      KEYS.forEach(function (k) { out[k] = Array.isArray(map[k]) ? map[k] : []; });
-      return resp(200, headers, { ok: true, data: out });
+    /* ---------- 注册（受 ALLOW_REGISTER 开关保护） ---------- */
+    if (action === 'register') {
+      if (!ALLOW_REGISTER) {
+        return resp(200, headers, { ok: false, error: '该环境未开放自助注册（作者已关闭公开注册）' });
+      }
+      const uid = uidOf(body.user);
+      const pass = String(body.pass || '');
+      if (!/^[a-z][a-z0-9_-]{5,19}$/.test(uid)) {
+        return resp(200, headers, { ok: false, error: '账号需 6-20 位、字母开头，只能含字母/数字/下划线/中划线（同微信号规则）' });
+      }
+      if (pass.length < 6) return resp(200, headers, { ok: false, error: '密码至少 6 位' });
+      if (await getUser(db, uid)) {
+        return resp(200, headers, { ok: false, error: '这个账号已被注册，换个名字或直接登录' });
+      }
+      const salt = newSalt();
+      const doc = {
+        user: String(body.user).trim(),
+        uid: uid,
+        name: String(body.name || '').trim() || '我的工作台',
+        sub: String(body.sub || '').trim() || '灵感 · 进度 · 复盘',
+        avatar: typeof body.avatar === 'string' ? body.avatar : '',
+        salt: salt,
+        hash: hashOf(pass, salt),
+        created_at: new Date().toISOString()
+      };
+      await db.collection(USERS_COL).doc(uid).set(doc);
+      const token = await issueToken(db, uid);
+      return resp(200, headers, { ok: true, token: token, profile: publicProfile(doc) });
     }
 
-    if (action === 'save') {
-      const key = body.key;
-      if (KEYS.indexOf(key) < 0) return resp(200, headers, { ok: false, error: 'bad key' });
-      if (!Array.isArray(body.items)) return resp(200, headers, { ok: false, error: 'items must be array' });
-      await db.collection(COL).doc(DOC_IDS[key]).set({
-        key: key,
-        items: body.items,
-        updated_at: new Date().toISOString()
-      });
+    /* ---------- 登录 ---------- */
+    if (action === 'login') {
+      const uid = uidOf(body.user);
+      const u = await getUser(db, uid);
+      if (!u || !u.salt || !safeEq(hashOf(String(body.pass || ''), u.salt), u.hash)) {
+        return resp(200, headers, { ok: false, error: '账号或密码不对' });
+      }
+      const token = await issueToken(db, uid);
+      return resp(200, headers, { ok: true, token: token, profile: publicProfile(u) });
+    }
+
+    /* ---------- 会话校验：拿 token 换资料（前端启动时验活） ---------- */
+    if (action === 'me') {
+      const a = await authUser(db, body.token);
+      if (!a) return resp(200, headers, { ok: false, needAuth: true, error: '登录已过期，请重新登录' });
+      return resp(200, headers, { ok: true, profile: publicProfile(a.user) });
+    }
+
+    /* ---------- 退出：吊销当前 token ---------- */
+    if (action === 'logout') {
+      if (body.token) { try { await db.collection(SESS_COL).doc(String(body.token)).remove(); } catch (e) {} }
       return resp(200, headers, { ok: true });
     }
 
-    if (action === 'importAll') {
+    /* ---------- 改资料：工作台名称 / 副标题 / 头像 ---------- */
+    if (action === 'updateProfile') {
+      const a = await authUser(db, body.token);
+      if (!a) return resp(200, headers, { ok: false, needAuth: true, error: '登录已过期，请重新登录' });
+      const patch = {};
+      if (typeof body.name === 'string') patch.name = body.name.trim().slice(0, 16) || a.user.name || '我的工作台';
+      if (typeof body.sub === 'string') patch.sub = body.sub.trim().slice(0, 24) || a.user.sub || '灵感 · 进度 · 复盘';
+      if (typeof body.avatar === 'string') patch.avatar = body.avatar;
+      patch.updated_at = new Date().toISOString();
+      await db.collection(USERS_COL).doc(a.uid).update(patch);
+      const u = await getUser(db, a.uid);
+      return resp(200, headers, { ok: true, profile: publicProfile(u || a.user) });
+    }
+
+    /* ---------- 以下为数据读写：必须带有效 token ---------- */
+    if (action === 'loadAll' || action === 'save' || action === 'importAll') {
+      const a = await authUser(db, body.token);
+      if (!a) return resp(200, headers, { ok: false, needAuth: true, error: '登录已过期，请重新登录' });
+      const uid = a.uid;
+
+      if (action === 'loadAll') {
+        let res;
+        try { res = await db.collection(COL).where({ uid: uid }).limit(100).get(); }
+        catch (e) { res = { data: [] }; }
+        const out = {};
+        KEYS.forEach(function (k) { out[k] = []; });
+        (res.data || []).forEach(function (d) {
+          if (d && KEYS.indexOf(d.key) >= 0 && Array.isArray(d.items)) out[d.key] = d.items;
+        });
+        const empty = KEYS.every(function (k) { return !out[k].length; });
+        if (empty && uid === LEGACY_UID) {
+          const legacy = await claimLegacy(db, uid); /* 老数据迁移给首个账号（原文档保留作备份） */
+          KEYS.forEach(function (k) { if (Array.isArray(legacy[k])) out[k] = legacy[k]; });
+        }
+        return resp(200, headers, { ok: true, data: out, migrated: empty && uid === LEGACY_UID });
+      }
+
+      if (action === 'save') {
+        const key = body.key;
+        if (KEYS.indexOf(key) < 0) return resp(200, headers, { ok: false, error: 'bad key' });
+        if (!Array.isArray(body.items)) return resp(200, headers, { ok: false, error: 'items must be array' });
+        await db.collection(COL).doc(docId(uid, key)).set({
+          uid: uid, key: key, items: body.items, updated_at: new Date().toISOString()
+        });
+        return resp(200, headers, { ok: true });
+      }
+
+      /* importAll：整体覆盖当前账号的数据（迁移/恢复备份用） */
       const data = body.data || {};
       const missing = KEYS.filter(function (k) { return !Array.isArray(data[k]); });
       if (missing.length) return resp(200, headers, { ok: false, error: '缺少数组: ' + missing.join(',') });
       for (let i = 0; i < KEYS.length; i++) {
         const k = KEYS[i];
-        await db.collection(COL).doc(DOC_IDS[k]).set({
-          key: k,
-          items: data[k],
-          updated_at: new Date().toISOString()
+        await db.collection(COL).doc(docId(uid, k)).set({
+          uid: uid, key: k, items: data[k], updated_at: new Date().toISOString()
         });
       }
       return resp(200, headers, { ok: true });

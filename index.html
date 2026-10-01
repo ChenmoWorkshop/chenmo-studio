@@ -1,20 +1,20 @@
 <!DOCTYPE html>
-<!-- 尘墨工坊 build 20261001-0945：名言区（位置+点击切换+分时段轮换） -->
+<!-- 创作工坊 build 20261001-1155：名言区（位置+点击切换+分时段轮换） -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>尘墨工坊</title>
+<title>创作工坊</title>
 <!-- 支持「添加到主屏幕 / 安装为应用」：之后点图标即可打开，不必记网址 -->
 <meta name="theme-color" content="#F5F1E8" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-<meta name="apple-mobile-web-app-title" content="尘墨工坊" />
-<meta name="application-name" content="尘墨工坊" />
+<meta name="apple-mobile-web-app-title" content="创作工坊" />
+<meta name="application-name" content="创作工坊" />
 <link rel="apple-touch-icon" href="logo.jpeg" />
 <link rel="icon" href="logo.jpeg" />
-<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%E5%B0%98%E5%A2%A8%E5%B7%A5%E5%9D%8A%22%2C%22short_name%22%3A%22%E5%B0%98%E5%A2%A8%22%2C%22start_url%22%3A%22%2F%3Fv%3D20261001%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23F5F1E8%22%2C%22theme_color%22%3A%22%23F5F1E8%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22logo.jpeg%22%2C%22sizes%22%3A%22any%22%2C%22type%22%3A%22image%2Fjpeg%22%7D%5D%7D" />
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22%E5%88%9B%E4%BD%9C%E5%B7%A5%E5%9D%8A%22%2C%22short_name%22%3A%22%E5%88%9B%E4%BD%9C%E5%B7%A5%E5%9D%8A%22%2C%22start_url%22%3A%22.%3Fv%3D20261001b%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23F5F1E8%22%2C%22theme_color%22%3A%22%23F5F1E8%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22logo.jpeg%22%2C%22sizes%22%3A%22any%22%2C%22type%22%3A%22image%2Fjpeg%22%7D%5D%7D" />
 <style>
   :root {
     --bg: #f7f1e6;          /* 米白纸底 */
@@ -66,6 +66,7 @@
   body[data-theme="focus"] .cal-ev.published,
   body[data-theme="tech"] .cal-ev.published { color: var(--bg); } /* 深色主题下灰底事件用深色文字 */
   * { box-sizing: border-box; }
+  .hidden { display: none !important; }
   html, body { margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
@@ -459,6 +460,51 @@
     .board .col h3 { margin-bottom: 8px; }
     .col-pager .pager, .pager { margin-top: 8px; }
   }
+  /* ---------- 账号门（注册 / 登录）与资料编辑 ---------- */
+  .auth-mask {
+    position: fixed; inset: 0; z-index: 300; display: grid; place-items: center;
+    background: var(--bg); overflow: auto; padding: 24px;
+  }
+  .auth-mask.hidden { display: none; }
+  .auth-card {
+    width: 396px; max-width: 94vw; min-height: 520px;
+    display: flex; flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--line); border-radius: 20px;
+    box-shadow: var(--shadow-lg); padding: 20px 24px 16px;
+  }
+  .auth-logo { width: 46px; height: 46px; border-radius: 13px; display: block; margin: 0 auto 8px; object-fit: cover; }
+  .auth-title { text-align: center; font-size: 20px; font-weight: 700; }
+  .auth-sub { text-align: center; font-size: 12px; color: var(--muted); margin: 3px 0 12px; }
+  .auth-tabs { display: flex; background: var(--surface-2); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 10px; }
+  .auth-tabs button { flex: 1; border: none; background: transparent; padding: 8px; border-radius: 9px; font-size: 14px; color: var(--muted); }
+  .auth-tabs button.active { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
+  .auth-form { display: flex; flex-direction: column; gap: 7px; }
+  .auth-form label { font-size: 12px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+  .auth-form input { padding: 8px 11px; width: 100%; min-width: 0; }
+  .auth-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .auth-row > label { min-width: 0; }
+  .auth-btn { border: none; background: var(--green); color: #fff; padding: 11px; border-radius: 12px; font-size: 15px; font-weight: 600; margin-top: 4px; }
+  .auth-btn:hover { filter: brightness(1.06); }
+  .auth-btn-ghost { background: var(--red-soft); color: var(--red); }
+  .auth-err { font-size: 12px; color: var(--red); min-height: 16px; margin-top: 2px; text-align: center; }
+  .auth-cancel { text-align: center; margin-top: 2px; }
+  .auth-cancel button, .auth-guest { border: none; background: transparent; color: var(--muted); font-size: 12px; text-decoration: underline; text-align: center; }
+  .auth-guest { display: block; margin: auto auto 0; padding-top: 10px; }
+  .ava-pick { display: flex; justify-content: center; }
+  .auth-form .ava { width: 46px; height: 46px; }
+  .ava-pick .ava {
+    width: 74px; height: 74px; border-radius: 50%; object-fit: cover; cursor: pointer;
+    border: 2px dashed var(--line); background: var(--surface-2);
+    display: grid; place-items: center; font-size: 11px; color: var(--muted);
+    overflow: hidden; transition: border-color .15s;
+  }
+  .ava-pick .ava:hover { border-color: var(--green); }
+  .ava-pick .ava img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ava-tip { text-align: center; font-size: 11px; color: var(--muted); margin: 3px 0 0; }
+  /* 品牌区可点击编辑 */
+  .brand { cursor: pointer; border-radius: 12px; transition: background .15s; }
+  .brand:hover { background: var(--surface-2); }
   .toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
     background: var(--ink); color: var(--bg); padding: 11px 20px; border-radius: 24px;
@@ -471,11 +517,11 @@
 <div class="layout">
   <!-- 侧栏 -->
   <aside class="sidebar" id="sidebar">
-    <div class="brand">
-      <img class="logo" src="logo.jpeg" alt="尘墨工坊">
+    <div class="brand" id="brand" title="点击编辑工作台资料">
+      <img class="logo" id="brandLogo" src="logo.jpeg" alt="工作台头像">
       <div>
-        <div class="name">尘墨工坊</div>
-        <div class="sub">灵感 · 进度 · 复盘</div>
+        <div class="name" id="brandName">尘墨工坊</div>
+        <div class="sub" id="brandSub">灵感 · 进度 · 复盘</div>
       </div>
     </div>
     <button class="nav-item active" data-page="home"><span class="ico">🏠</span><span class="nav-label">工作台</span></button>
@@ -669,6 +715,62 @@
   </div>
 </div>
 
+<!-- 账号门：注册 / 登录（云端建号，密码加盐哈希存储，本机只留登录 token） -->
+<div class="auth-mask hidden" id="authMask">
+  <div class="auth-card">
+    <img class="auth-logo" id="authLogo" src="logo.jpeg" alt="创作工坊">
+    <div class="auth-title">创作工坊</div>
+    <div class="auth-sub">灵感 · 进度 · 复盘 —— 你的个人创作工作台</div>
+    <div class="auth-tabs">
+      <button id="tabLogin" class="active" type="button">登录</button>
+      <button id="tabRegister" type="button">注册</button>
+    </div>
+
+    <form class="auth-form" id="loginForm" autocomplete="off">
+      <label>账号<input id="loginUser" maxlength="20" placeholder="用户名" required></label>
+      <label>密码<input id="loginPass" type="password" maxlength="40" placeholder="至少 6 位" required></label>
+      <div class="auth-err" id="authErr"></div>
+      <button class="auth-btn" type="submit">进入工作台</button>
+    </form>
+
+    <form class="auth-form hidden" id="regForm" autocomplete="off">
+      <div class="ava-pick"><div class="ava" id="regAva" title="不上传则使用默认图标；点击上传自定义头像（自动裁方压缩）"><img src="logo.jpeg" alt="默认头像"></div></div>
+      <input type="file" id="regAvaFile" accept="image/*" hidden>
+      <div class="auth-row">
+        <label>账号<input id="regUser" maxlength="20" placeholder="字母开头 6-20 位" required></label>
+        <label>工作台名称<input id="regName" maxlength="16" placeholder="默认：我的工作台"></label>
+      </div>
+      <div class="auth-row">
+        <label>密码<input id="regPass" type="password" maxlength="40" placeholder="至少 6 位" required></label>
+        <label>确认密码<input id="regPass2" type="password" maxlength="40" placeholder="再输入一次" required></label>
+      </div>
+      <div class="auth-err" id="regErr"></div>
+      <button class="auth-btn" type="submit">创建账号</button>
+    </form>
+
+    <button class="auth-guest" id="guestBtn" type="button">先以游客身份体验 →</button>
+  </div>
+</div>
+
+<!-- 资料编辑弹窗 -->
+<div class="auth-mask hidden" id="profMask">
+  <div class="auth-card">
+    <div class="auth-title">工作台资料</div>
+    <div class="auth-sub">头像与名称会显示在左侧边栏顶部，随时可改</div>
+    <form class="auth-form" id="profForm" autocomplete="off">
+      <div class="ava-pick"><div class="ava" id="profAva" title="点击更换头像"><img src="logo.jpeg" alt="默认头像"></div></div>
+      <input type="file" id="profAvaFile" accept="image/*" hidden>
+      <div class="ava-tip">点击头像更换自定义图片，不选则用默认图标</div>
+      <label>工作台名称<input id="profName" maxlength="16" placeholder="例如：尘墨工坊"></label>
+      <label>副标题<input id="profSub" maxlength="24" placeholder="例如：灵感 · 进度 · 复盘"></label>
+      <div class="auth-err" id="profErr"></div>
+      <button class="auth-btn" type="submit">保存</button>
+      <button class="auth-btn auth-btn-ghost" id="profLogout" type="button">退出登录</button>
+      <div class="auth-cancel"><button id="profCancel" type="button">取消</button></div>
+    </form>
+  </div>
+</div>
+
 <script>
 /* ============ 统一数据层 ============ */
 const SAMPLE = {
@@ -697,7 +799,8 @@ const SAMPLE = {
 /* ============ 云端数据层（腾讯云开发 CloudBase 文档数据库） ============ */
 /* 页面放在 WorkBuddy 域名（访问无风险提示页）；该域名不在 CloudBase 安全域名白名单内，
    所以不直接调 JS SDK，改由云函数 chenmo-api 代理读写——函数在云端有管理员权限，并下发 CORS。
-   数据对所有知道网址的人开放读写，请勿放敏感内容。 */
+   账号体系：注册/登录由云函数校验（scrypt 加盐哈希），下发 90 天 token；
+   所有数据读写都必须带有效 token，数据按账号隔离存放。 */
 const CB_ENV = 'chenmo-d9gcmpopbed61c597';
 const CB_API = 'https://chenmo-d9gcmpopbed61c597-1314109349.ap-shanghai.app.tcloudbase.com/chenmo-api';
 /* 正式访问入口 */
@@ -713,18 +816,21 @@ const KEYS = ['todos', 'ideas', 'contents', 'reviews'];
 let DB = { todos: [], ideas: [], contents: [], reviews: [] };
 let _currentPage = 'home';
 let _cloudReady = false;
+let _guest = false; /* 游客模式：可体验数据，改动不写云端 */
 const _pending = new Set(), _failed = new Set(), _saveTimers = {};
 
 function initCloud(){ return typeof fetch === 'function'; }
 
-/* 统一调用云函数：失败时抛出可读错误 */
+/* 统一调用云函数：自动带登录 token；失败时抛出可读错误 */
 async function api(action, payload){
+  const body = Object.assign({ action: action }, payload || {});
+  if (!body.token && typeof SESSION !== 'undefined' && SESSION && SESSION.token) body.token = SESSION.token;
   let res;
   try{
     res = await fetch(CB_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ action: action }, payload || {}))
+      body: JSON.stringify(body)
     });
   }catch(e){
     throw new Error('network request error');
@@ -732,7 +838,11 @@ async function api(action, payload){
   if (!res.ok) throw new Error('HTTP ' + res.status);
   let j;
   try{ j = await res.json(); }catch(e){ throw new Error('返回内容不是 JSON（可能被拦截页挡住）'); }
-  if (!j || j.ok !== true) throw new Error((j && j.error) || '云端返回异常');
+  if (!j || j.ok !== true){
+    const err = new Error((j && j.error) || '云端返回异常');
+    if (j && j.needAuth) err.needAuth = true;
+    throw err;
+  }
   return j;
 }
 
@@ -741,6 +851,12 @@ function syncState(s, err){
   const el = $('#syncStatus'); if (!el) return;
   const txt = $('#syncTxt'); if (!txt) return;
   el.classList.remove('st-saving', 'st-saved', 'st-error');
+  if (_guest && (s === 'saved' || s === 'saving' || s === 'guest')){
+    el.classList.add('st-saved');
+    txt.textContent = '游客体验 · 改动不保存';
+    el.title = '游客模式：可体验已有数据，改动只在当前页面生效，刷新后恢复，不会写入云端';
+    return;
+  }
   if (s === 'saving'){ el.classList.add('st-saving'); txt.textContent = '保存中…'; el.title = ''; }
   else if (s === 'saved'){ el.classList.add('st-saved'); txt.textContent = '云端自动保存'; el.title = '数据存在云端，多设备同步'; }
   else if (s === 'error'){
@@ -756,6 +872,7 @@ async function pushKey(k, items){
 }
 
 function save(k){
+  if (_guest) return; /* 游客模式：所有写操作直接跳过，不碰云端 */
   if (!_cloudReady){ _failed.add(k); syncState('error', '云端尚未连接'); return; }
   _pending.add(k); syncState('saving');
   clearTimeout(_saveTimers[k]);
@@ -1490,6 +1607,14 @@ async function boot(){
   applyTheme(th);
   syncState('connecting');
   if (!initCloud()){ bootFail('云开发 SDK 未加载（可能网络不通）'); return; }
+  /* 游客模式：用内置演示数据体验全部功能，读写都不碰云端 */
+  if (_guest){
+    applyMap(SAMPLE);
+    _cloudReady = false;
+    syncState('saved'); bootDone(); renderHome();
+    await loadDayQuotes(); renderQuote();
+    return;
+  }
   try{
     const map = await cloudLoadAll();
     const isEmpty = KEYS.every(k => !Array.isArray(map[k]) || !map[k].length);
@@ -1499,7 +1624,7 @@ async function boot(){
     await loadDayQuotes(); /* 取当天中西各五条 */
     renderQuote();
   }catch(err){
-    _authTask = null;
+    if (err && err.needAuth){ sessionExpired(); return; }
     bootFail((err && (err.message || err)) || '未知错误');
   }
 }
@@ -1638,7 +1763,227 @@ window.addEventListener('resize', ()=>{
     else if (_currentPage === 'calendar') renderCalendar();
   }, 180);
 });
-boot();
+/* ============ 账号与工作台资料（云端鉴权版） ============ */
+/* 账号存云端集合 chenmo_users（scrypt 加盐哈希，源码不含明文密码），
+   登录下发 90 天 token 存 chenmo_sessions；本机 localStorage 只留 token 与资料快照。 */
+const APP_NAME = '创作工坊';
+const SESS_KEY = 'cwb_session';
+const DEFAULT_PROFILE = { name: '我的工作台', sub: '灵感 · 进度 · 复盘', avatar: '' };
+
+let SESSION = null; /* { token, user, name, sub, avatar } | { guest:true, ... } */
+
+function loadSession(){
+  try{ const s = JSON.parse(localStorage.getItem(SESS_KEY)); return (s && (s.token || s.guest)) ? s : null; }
+  catch(e){ return null; }
+}
+function saveSession(s){
+  if (s) localStorage.setItem(SESS_KEY, JSON.stringify(s));
+  else localStorage.removeItem(SESS_KEY);
+}
+function getProfile(){
+  const base = Object.assign({}, DEFAULT_PROFILE);
+  if (SESSION){ base.name = SESSION.name || base.name; base.sub = SESSION.sub || base.sub; base.avatar = SESSION.avatar || ''; }
+  return base;
+}
+
+function applyProfile(){
+  const p = getProfile();
+  $('#brandName').textContent = p.name || DEFAULT_PROFILE.name;
+  $('#brandSub').textContent = p.sub || DEFAULT_PROFILE.sub;
+  $('#brandLogo').src = p.avatar || 'logo.jpeg';
+  document.title = APP_NAME;
+}
+
+/* 登录态失效：清会话回到账号门 */
+function sessionExpired(){
+  saveSession(null); SESSION = null; _guest = false; _cloudReady = false;
+  try{ clearInterval(_pollTimer); }catch(e){}
+  toast('登录已过期，请重新登录');
+  $('#bootMask').classList.add('hidden');
+  showAuth('login');
+}
+
+/* 头像选择：读文件 → 居中裁方 → 压缩为 dataURL */
+function bindAvaPicker(box, fileInput, onPicked){
+  box.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files && fileInput.files[0];
+    if (!f) return;
+    if (!/^image\//.test(f.type)){ toast('请选择图片文件'); return; }
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = c.height = 256;
+        const s = Math.min(img.width, img.height);
+        c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, 256, 256);
+        onPicked(c.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => toast('这张图片读取失败，换一张试试');
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(f);
+    fileInput.value = '';
+  });
+}
+
+/* ---- 账号门显示/切换 ---- */
+function showAuth(tab){
+  $('#authMask').classList.remove('hidden');
+  $('#profMask').classList.add('hidden');
+  switchAuthTab(tab || 'login');
+}
+function switchAuthTab(tab){
+  const isLogin = tab === 'login';
+  $('#tabLogin').classList.toggle('active', isLogin);
+  $('#tabRegister').classList.toggle('active', !isLogin);
+  $('#loginForm').classList.toggle('hidden', !isLogin);
+  $('#regForm').classList.toggle('hidden', isLogin);
+  $('#authErr').textContent = ''; $('#regErr').textContent = '';
+}
+$('#tabLogin').addEventListener('click', () => switchAuthTab('login'));
+$('#tabRegister').addEventListener('click', () => switchAuthTab('register'));
+
+function enterApp(){
+  applyProfile();
+  $('#authMask').classList.add('hidden');
+  $('#bootMask').classList.remove('hidden', 'is-error');
+  boot();
+}
+
+/* ---- 注册（云端建号，账号唯一性由服务端把关） ---- */
+let _regAvatar = '';
+bindAvaPicker($('#regAva'), $('#regAvaFile'), d => { _regAvatar = d; $('#regAva').innerHTML = '<img src="' + d + '" alt="头像">'; });
+$('#regForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const u = $('#regUser').value.trim();
+  const p1 = $('#regPass').value, p2 = $('#regPass2').value;
+  const name = $('#regName').value.trim() || DEFAULT_PROFILE.name;
+  const err = $('#regErr');
+  const btn = $('#regForm button[type=submit]');
+  if (!/^[A-Za-z][A-Za-z0-9_-]{5,19}$/.test(u)) return err.textContent = '账号需 6-20 位、字母开头，可含数字、下划线、中划线（同微信号规则）';
+  if (p1.length < 6) return err.textContent = '密码至少 6 位';
+  if (p1 !== p2) return err.textContent = '两次输入的密码不一致';
+  err.textContent = '';
+  btn.disabled = true; const old = btn.textContent; btn.textContent = '正在创建…';
+  try{
+    const r = await api('register', { user: u, pass: p1, name: name, avatar: _regAvatar });
+    SESSION = { token: r.token, user: r.profile.user, name: r.profile.name, sub: r.profile.sub, avatar: r.profile.avatar };
+    saveSession(SESSION);
+    enterApp(); toast('注册成功，欢迎入驻 ✨');
+  }catch(ex){
+    err.textContent = ex.message || '注册失败，请稍后再试';
+  }finally{
+    btn.disabled = false; btn.textContent = old;
+  }
+});
+
+/* ---- 登录 ---- */
+$('#loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const u = $('#loginUser').value.trim();
+  const p = $('#loginPass').value;
+  const err = $('#authErr');
+  const btn = $('#loginForm button[type=submit]');
+  err.textContent = '';
+  btn.disabled = true; const old = btn.textContent; btn.textContent = '正在登录…';
+  try{
+    const r = await api('login', { user: u, pass: p });
+    SESSION = { token: r.token, user: r.profile.user, name: r.profile.name, sub: r.profile.sub, avatar: r.profile.avatar };
+    saveSession(SESSION);
+    enterApp(); toast('欢迎回来，' + r.profile.name);
+  }catch(ex){
+    err.textContent = ex.message || '登录失败，请稍后再试';
+  }finally{
+    btn.disabled = false; btn.textContent = old;
+  }
+});
+
+/* ---- 游客体验：用内置演示数据体验全部功能，任何改动都不写云端 ---- */
+$('#guestBtn').addEventListener('click', () => {
+  SESSION = { guest: true, name: DEFAULT_PROFILE.name, sub: DEFAULT_PROFILE.sub, avatar: '' };
+  saveSession(SESSION);
+  _guest = true;
+  enterApp(); toast('游客模式：可体验数据，改动不会保存');
+});
+
+/* ---- 资料编辑（点侧栏品牌区打开） ---- */
+let _profAvatar = null; /* null = 未改动 */
+bindAvaPicker($('#profAva'), $('#profAvaFile'), d => { _profAvatar = d; $('#profAva').innerHTML = '<img src="' + d + '" alt="头像">'; });
+$('#brand').addEventListener('click', () => {
+  const p = getProfile();
+  $('#profName').value = p.name;
+  $('#profSub').value = p.sub;
+  _profAvatar = null;
+  $('#profAva').innerHTML = p.avatar ? '<img src="' + p.avatar + '" alt="头像">' : '<img src="logo.jpeg" alt="默认头像">';
+  $('#profErr').textContent = '';
+  $('#profMask').classList.remove('hidden');
+});
+$('#profCancel').addEventListener('click', () => $('#profMask').classList.add('hidden'));
+$('#profForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('#profName').value.trim() || DEFAULT_PROFILE.name;
+  const sub = $('#profSub').value.trim() || DEFAULT_PROFILE.sub;
+  const err = $('#profErr');
+  err.textContent = '';
+  if (_guest){ /* 游客：只改本页显示，不落云端 */
+    SESSION.name = name; SESSION.sub = sub;
+    if (_profAvatar !== null) SESSION.avatar = _profAvatar;
+    saveSession(SESSION); applyProfile();
+    $('#profMask').classList.add('hidden');
+    toast('资料已更新（游客模式，未保存到云端）');
+    return;
+  }
+  const btn = $('#profForm button[type=submit]');
+  btn.disabled = true; const old = btn.textContent; btn.textContent = '保存中…';
+  try{
+    const body = { name: name, sub: sub };
+    if (_profAvatar !== null) body.avatar = _profAvatar;
+    const r = await api('updateProfile', body);
+    SESSION.name = r.profile.name; SESSION.sub = r.profile.sub; SESSION.avatar = r.profile.avatar;
+    saveSession(SESSION); applyProfile();
+    $('#profMask').classList.add('hidden');
+    toast('资料已更新');
+  }catch(ex){
+    if (ex.needAuth){ sessionExpired(); return; }
+    err.textContent = ex.message || '保存失败，请稍后再试';
+  }finally{
+    btn.disabled = false; btn.textContent = old;
+  }
+});
+$('#profLogout').addEventListener('click', async () => {
+  const t = SESSION && SESSION.token;
+  saveSession(null); SESSION = null; _guest = false; _cloudReady = false;
+  try{ clearInterval(_pollTimer); }catch(e){}
+  if (t){ try{ await api('logout', { token: t }); }catch(e){} }
+  location.reload(); /* 回到账号门 */
+});
+
+/* ---- 入口：有会话直接进（启动时校验 token），否则停在账号门 ---- */
+(async function authGate(){
+  SESSION = loadSession();
+  if (SESSION && SESSION.guest){
+    _guest = true;
+    enterApp();
+    return;
+  }
+  if (SESSION && SESSION.token){
+    try{
+      const r = await api('me'); /* 验活：过期/被吊销就直接回账号门 */
+      SESSION.name = r.profile.name; SESSION.sub = r.profile.sub; SESSION.avatar = r.profile.avatar;
+      saveSession(SESSION);
+      enterApp();
+      return;
+    }catch(e){ /* 网络异常也让他进，启动时会再校验一次并给出提示 */ 
+      enterApp();
+      return;
+    }
+  }
+  SESSION = null; saveSession(null);
+  $('#bootMask').classList.add('hidden');
+  showAuth('login');
+})();
 </script>
 </body>
 </html>
