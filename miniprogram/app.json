@@ -6,7 +6,8 @@
     "pages/board/board",
     "pages/calendar/calendar",
     "pages/review/review",
-    "pages/profile/profile"
+    "pages/profile/profile",
+    "pages/pair/pair"
   ],
   "window": {
     "navigationBarBackgroundColor": "#f7f1e6",

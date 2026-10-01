@@ -138,6 +138,11 @@ Page({
     });
   },
 
+  /* 网页扫码登录授权入口 */
+  goPair: function () {
+    wx.navigateTo({ url: '/pages/pair/pair' });
+  },
+
   /* 解绑微信：只解除这台微信的免密关系，账号与数据都在 */
   unbind: function () {
     const self = this;

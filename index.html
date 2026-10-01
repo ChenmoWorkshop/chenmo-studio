@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 创作工坊 build 20261002-0318：密保邮箱绑定 + 忘记密码自助找回（SMTP 邮箱验证码） -->
+<!-- 创作工坊 build 20261002-0348：微信扫码/配对登录（网页出码，小程序授权）+ toast 层级修复 -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
@@ -584,6 +584,11 @@
     font-size: 14px; z-index: 400; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(-6px); }
+  .pair-qr { display: flex; justify-content: center; margin: 6px 0 10px; }
+  .pair-qr img, .pair-qr canvas { width: 168px; height: 168px; border: 6px solid #fff; border-radius: 8px; background: #fff; box-sizing: content-box; }
+  .pair-qr.expired { position: relative; }
+  .pair-code { font-size: 30px; font-weight: 500; letter-spacing: 10px; text-align: center; font-variant-numeric: tabular-nums; color: var(--ink); margin: 2px 0 6px; }
+  .pair-actions { display: flex; justify-content: center; margin-bottom: 6px; }
 </style>
 </head>
 <body>
@@ -822,7 +827,7 @@
       <button class="auth-btn" type="submit">进入工作台</button>
       <div class="auth-wx-line"><span>或</span></div>
       <button class="auth-btn auth-wx-btn" id="wxLoginBtn" type="button">微信一键登录</button>
-      <div class="auth-wx-tip">微信授权仅在小程序端支持；账号数据与网页版通用，绑定后小程序免密进入</div>
+      <div class="auth-wx-tip">网页扫码登录：在小程序里「网页登录授权」后免密进入；账号数据与小程序通用</div>
     </form>
 
     <!-- 找回密码：验证码发到账号绑定的密保邮箱 -->
@@ -840,6 +845,16 @@
       <div class="auth-err" id="resetErr"></div>
       <button class="auth-btn" type="submit">重置密码</button>
       <div class="auth-cancel"><button id="resetBack" type="button">返回登录</button></div>
+    </form>
+
+    <!-- 微信扫码/配对登录：网页出码，小程序授权（官方扫码登录需企业资质，此为自建桥） -->
+    <form class="auth-form hidden" id="wxPairForm" autocomplete="off">
+      <div class="auth-sub" style="margin:0 0 2px">打开「创作工坊」小程序 → 网页登录授权 → 扫码或输码</div>
+      <div class="pair-qr" id="pairQr" title="也可在小程序里手动输入下方 6 位配对码"></div>
+      <div class="pair-code" id="pairCode">······</div>
+      <div class="auth-hint" id="pairHint">等待小程序确认…（二维码 2 分钟有效）</div>
+      <div class="auth-err" id="pairErr"></div>
+      <div class="auth-cancel"><button id="pairBack" type="button">返回登录</button></div>
     </form>
 
     <form class="auth-form hidden" id="regForm" autocomplete="off">
@@ -891,6 +906,7 @@
   </div>
 </div>
 
+<script src="qrcode.min.js"></script>
 <script>
 /* ============ 统一数据层 ============ */
 const SAMPLE = {
@@ -2049,7 +2065,9 @@ function switchAuthTab(tab){
   $('#loginForm').classList.toggle('hidden', !isLogin);
   $('#regForm').classList.toggle('hidden', tab !== 'register');
   $('#resetForm').classList.toggle('hidden', tab !== 'reset');
-  $('#authErr').textContent = ''; $('#regErr').textContent = ''; $('#resetErr').textContent = '';
+  $('#wxPairForm').classList.toggle('hidden', tab !== 'wxpair');
+  $('#authErr').textContent = ''; $('#regErr').textContent = ''; $('#resetErr').textContent = ''; $('#pairErr').textContent = '';
+  if (tab !== 'wxpair') stopPairPoll();   /* 离开配对视图就停轮询 */
 }
 $('#tabLogin').addEventListener('click', () => switchAuthTab('login'));
 $('#tabRegister').addEventListener('click', () => switchAuthTab('register'));
@@ -2165,13 +2183,60 @@ $('#resetForm').addEventListener('submit', async e => {
 });
 
 /* ---- 游客体验：用内置演示数据体验全部功能，任何改动都不写云端 ---- */
-$('#wxLoginBtn').addEventListener('click', () => {
-  const t = $('#toast');
-  t.textContent = '微信一键登录请在「创作工坊」小程序中使用，账号与网页版通用';
-  t.classList.add('show');
-  clearTimeout(t._tm);
-  t._tm = setTimeout(() => t.classList.remove('show'), 2600);
-});
+/* ---- 微信扫码/配对登录：网页出码，小程序确认 ---- */
+let _pairTm = null, _pairId = '';
+function stopPairPoll(){ clearInterval(_pairTm); _pairTm = null; }
+
+function renderPairQr(text){
+  const box = $('#pairQr');
+  box.innerHTML = '';
+  try {
+    const qr = qrcode(0, 'M');
+    qr.addData(text);
+    qr.make();
+    box.innerHTML = qr.createImgTag(4, 8);
+  } catch (e) { box.textContent = '（二维码生成失败，可直接输码）'; }
+}
+
+async function startPairing(){
+  stopPairPoll();
+  $('#pairErr').textContent = '';
+  $('#pairHint').textContent = '正在生成配对码…';
+  $('#pairCode').textContent = '······';
+  $('#pairQr').innerHTML = '';
+  try {
+    const r = await api('pairCreate', {});
+    _pairId = r.pairId;
+    $('#pairCode').textContent = r.code;
+    renderPairQr('CHENMOPAIR:' + r.code);
+    $('#pairHint').textContent = '等待小程序确认…（二维码 2 分钟有效）';
+    const started = Date.now();
+    _pairTm = setInterval(async () => {
+      if (Date.now() - started > 125000){   /* 与服务端 2 分钟有效期同步 */
+        stopPairPoll();
+        $('#pairHint').textContent = '';
+        $('#pairErr').textContent = '配对码已过期';
+        return;
+      }
+      try {
+        const p = await api('pairPoll', { pairId: _pairId, code: $('#pairCode').textContent });
+        if (p.status === 'done' && p.token){
+          stopPairPoll();
+          SESSION = { token: p.token, user: p.profile.user, name: p.profile.name, sub: p.profile.sub, avatar: p.profile.avatar, email: p.profile.email || '' };
+          saveSession(SESSION);
+          enterApp(); toast('微信授权登录成功，欢迎回来，' + p.profile.name);
+        }
+        /* pending 时保持等待 */
+      } catch (ex) { /* 单次轮询失败静默重试 */ }
+    }, 2500);
+  } catch (ex) {
+    $('#pairHint').textContent = '';
+    $('#pairErr').textContent = ex.message || '创建配对失败，请稍后再试';
+  }
+}
+
+$('#wxLoginBtn').addEventListener('click', () => { switchAuthTab('wxpair'); startPairing(); });
+$('#pairBack').addEventListener('click', () => switchAuthTab('login'));
 $('#guestBtn').addEventListener('click', () => {
   SESSION = { guest: true, name: DEFAULT_PROFILE.name, sub: DEFAULT_PROFILE.sub, avatar: '' };
   saveSession(SESSION);

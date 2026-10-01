@@ -1,0 +1,27 @@
+.pair-input {
+  font-size: 40rpx;
+  letter-spacing: 12rpx;
+  text-align: center;
+  font-weight: 500;
+  margin: 8rpx 0 20rpx;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  margin: 32rpx 0 24rpx;
+  color: #938a7c;
+  font-size: 24rpx;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e6ddcd;
+}
+
+.divider text {
+  padding: 0 20rpx;
+}

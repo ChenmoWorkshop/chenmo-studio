@@ -666,6 +666,60 @@ async function handle(event) {
       return resp(200, headers, { ok: true });
     }
 
+    /* ---------- 网页↔小程序 配对登录 ----------
+       网页端拿不到微信授权（openid 只在小程序内网注入），
+       官方扫码登录又要企业资质。自建桥：网页生成短时配对码，
+       小程序端由已登录账号确认授权，网页轮询换取正式 token。
+       pairId 是 48 位随机串（真正的凭据），配对码只是给人看的；
+       2 分钟有效、一次性，确认方必须持有有效登录态。 */
+    if (action === 'pairCreate') {
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const pairId = crypto.randomBytes(24).toString('hex');
+      const exp = Date.now() + 2 * 60 * 1000;
+      await db.collection(VERIFY_COL).doc('pair__' + pairId).set({
+        purpose: 'pair', code: code, status: 'pending', uid: '', exp: exp, created_at: new Date().toISOString()
+      });
+      return resp(200, headers, { ok: true, code: code, pairId: pairId, exp: exp });
+    }
+
+    if (action === 'pairConfirm') {
+      const a = await authUser(db, body.token);
+      if (!a) return resp(200, headers, { ok: false, needAuth: true, error: '请先在小程序登录' });
+      const code = String(body.code || '').trim();
+      if (!/^\d{6}$/.test(code)) return resp(200, headers, { ok: false, error: '配对码格式不对' });
+      let hit = null;
+      try {
+        const r = await db.collection(VERIFY_COL).where({ purpose: 'pair', code: code, status: 'pending' }).limit(2).get();
+        hit = (r.data || [])[0] || null;
+      } catch (e) { hit = null; }
+      if (!hit || Date.now() > hit.exp) {
+        if (hit) { try { await db.collection(VERIFY_COL).doc(hit._id).remove(); } catch (e) {} }
+        return resp(200, headers, { ok: false, error: '配对码不存在或已过期，请在网页上刷新' });
+      }
+      await db.collection(VERIFY_COL).doc(hit._id).update({
+        status: 'ok', uid: a.uid, confirmed_at: new Date().toISOString()
+      });
+      return resp(200, headers, { ok: true, user: a.user.user || a.user.name || a.uid });
+    }
+
+    if (action === 'pairPoll') {
+      const pairId = String(body.pairId || '');
+      if (!/^[0-9a-f]{48}$/.test(pairId)) return resp(200, headers, { ok: false, error: '参数不对' });
+      const d = await getDoc(db, VERIFY_COL, 'pair__' + pairId);
+      if (!d) return resp(200, headers, { ok: true, status: 'expired' });
+      if (Date.now() > d.exp) {
+        try { await db.collection(VERIFY_COL).doc('pair__' + pairId).remove(); } catch (e) {}
+        return resp(200, headers, { ok: true, status: 'expired' });
+      }
+      if (d.status !== 'ok') return resp(200, headers, { ok: true, status: 'pending' });
+      /* 已确认：签发正式登录态并立即销毁配对文档（一次性） */
+      const token = await issueToken(db, d.uid);
+      try { await db.collection(VERIFY_COL).doc('pair__' + pairId).remove(); } catch (e) {}
+      const u = await getUser(db, d.uid);
+      if (!u) return resp(200, headers, { ok: false, error: '账号不存在' });
+      return resp(200, headers, { ok: true, status: 'done', token: token, profile: publicProfile(u) });
+    }
+
     /* ---------- 以下为数据读写：必须带有效 token ---------- */
     if (action === 'loadAll' || action === 'save' || action === 'importAll') {
       const a = await authUser(db, body.token);

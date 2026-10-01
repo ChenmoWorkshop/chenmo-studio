@@ -57,6 +57,12 @@ function resetPassword(user, code, pass) {
   return cloud.call('resetPassword', { user: user, code: code, pass: pass }, { noAuth: true });
 }
 
+/* —— 网页扫码/配对登录 —— */
+/* 用当前登录态确认网页端的配对码（需已登录） */
+function pairConfirm(code) {
+  return cloud.call('pairConfirm', { code: code });
+}
+
 module.exports = {
   wxLogin: wxLogin,
   wxBind: wxBind,
@@ -69,5 +75,6 @@ module.exports = {
   updateProfile: updateProfile,
   sendEmailCode: sendEmailCode,
   bindEmail: bindEmail,
-  resetPassword: resetPassword
+  resetPassword: resetPassword,
+  pairConfirm: pairConfirm
 };

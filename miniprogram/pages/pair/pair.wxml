@@ -1,0 +1,25 @@
+<view class="page-wrap">
+  <view class="page-head">
+    <view class="h1">网页登录授权</view>
+    <view class="sub">电脑网页上显示配对码后，在这里扫码或输码确认，网页即可免密登录你的账号。</view>
+  </view>
+
+  <view class="card">
+    <view class="btn block" bindtap="scan">📷 扫描网页上的二维码</view>
+
+    <view class="divider"><text>或手动输入配对码</text></view>
+
+    <input class="input pair-input" value="{{code}}" type="number" maxlength="6"
+           placeholder="6 位配对码" bindinput="onInput" />
+
+    <view class="err" wx:if="{{err}}">{{err}}</view>
+
+    <view class="btn block submit {{busy ? 'dis' : ''}}" bindtap="confirm">
+      {{busy ? '确认中…' : '确认授权'}}
+    </view>
+    <view class="hint" wx:if="{{okUser}}">已授权{{okUser}}在网页端登录，回到网页即可自动进入。</view>
+    <view class="muted tip">配对码 2 分钟有效、一次一用；确认即视为本人操作。网页登录态 90 天后需重新授权。</view>
+  </view>
+
+  <view class="btn ghost block" bindtap="back">返回</view>
+</view>
