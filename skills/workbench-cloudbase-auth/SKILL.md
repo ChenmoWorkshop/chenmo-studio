@@ -173,3 +173,4 @@ if (!ALLOW_REGISTER) {
 - 部署云函数用 MCP `manageFunctions(action=updateFunctionCode, functionRootPath=functions父目录)`；`tcb fn deploy` 常报成功但代码不更新
 - 发布页面后 CDN 边缘缓存可能仍是旧版：用带 `?v=xxx` 的 URL 验证源站，并提醒用户强刷
 - 页内 `<!-- build YYYYMMDD-HHMM -->` 版本标记若写在 `<!DOCTYPE>` **之前**，`document.documentElement.outerHTML` 里拿不到它（它在 `<html>` 之外），用它做端到端断言会假失败——用 `curl` 抓源码判断版本更可靠
+- **发布网页版时，若项目根目录存在 `miniprogram/` 目录，站点发布会被识别成"小程序应用"**（返回 appId、不给分享链接、不部署网页），网页版不会更新。手法：发布前把该目录临时移出项目根（如 `mv miniprogram ../_mp_hold/`）→ 发布网页版 → 移回并确认 `git status` 干净。小程序工程放子目录不受影响，但发布动作本身要看不到它
