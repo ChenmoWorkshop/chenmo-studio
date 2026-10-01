@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 创作工坊 build 20261001-1155：名言区（位置+点击切换+分时段轮换） -->
+<!-- 创作工坊 build 20261001-2230：移动端顶栏（图片/文本内嵌）+ 自定义优先级下拉 + 首次保存被吞修复 -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
@@ -337,6 +337,14 @@
 
   /* 看板 */
   .board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap); align-items: start; }
+  /* 单标签模式：选中「想法/制作中/已发布」之一时只渲染该列，独占整行；
+     列高与卡片尺寸沿用「全部」模式（414px / 96px），一行三张均匀分布 */
+  .board.single { grid-template-columns: minmax(0, 1fr); }
+  .board.single .col-body {
+    display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;
+    align-content: start;
+  }
+  .board.single .col-body > .empty { min-height: 200px; }
   .col { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; min-width: 0; }
   .col.drag-over { outline: 2px dashed var(--green); outline-offset: -4px; }
   .col h3 { margin: 0 0 12px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
@@ -419,11 +427,62 @@
   .form-row input, .form-row select, .form-row textarea { width: 100%; }
   .modal-acts { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
 
+  /* 自定义优先级下拉：真机上原生 select 会弹出系统深色单选框，观感与主题不符，
+     改为站内样式的下拉面板；原生 select 保留在 DOM（隐藏）以兼容既有 .value 读取 */
+  .pri-select { position: relative; flex-shrink: 0; }
+  .pri-select select { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  .pri-btn {
+    display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 10px 0 14px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+    color: var(--ink); font-size: 14px; cursor: pointer; user-select: none; white-space: nowrap;
+  }
+  .pri-btn::after { content: ''; border: 4px solid transparent; border-top-color: var(--muted); margin-top: 4px; }
+  .pri-menu {
+    display: none; position: absolute; top: calc(100% + 6px); right: 0; min-width: 100%;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    box-shadow: var(--shadow); padding: 4px; z-index: 80;
+  }
+  .pri-select.open .pri-menu { display: block; }
+  .pri-opt {
+    display: block; width: 100%; text-align: left; padding: 8px 14px; border: none;
+    background: none; border-radius: 7px; font-size: 14px; color: var(--ink);
+    cursor: pointer; white-space: nowrap;
+  }
+  .pri-opt:hover { background: var(--surface-2); }
+  .pri-opt.sel { background: var(--surface-2); color: var(--green); font-weight: 600; }
   /* 底部导航（手机/平板） */
   .bottom-nav { display: none; }
+  /* 移动端顶栏：窄屏侧栏隐藏后，账号与每日名言以纯文本内嵌顶部通栏，
+     仅在工作台页显示，切到其他页隐藏；点击行为与桌面端一致 */
+  .mobile-topbar { display: none; }
+  .mobile-topbar.hide { display: none !important; }
   @media (max-width: 1023px) {
     .sidebar { display: none; }
-    .main { padding: 18px 16px 86px; }
+    /* 顶栏高度随名言行数变化（1~2 行），主内容上边距跟着走，长名言也不会压住标题 */
+    .main { padding: calc(var(--tbh, 54px) + 12px) 16px 86px; }
+    .mobile-topbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 46;
+      min-height: 54px; height: auto; padding: 6px 16px;
+      background: var(--bg); border-bottom: 1px solid var(--line);
+    }
+    .mobile-account {
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+      background: none; border: none; padding: 0; box-shadow: none; cursor: pointer;
+    }
+    .mobile-account img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; display: block; }
+    .mobile-account .ma-name {
+      font-size: 14px; font-weight: 600; color: var(--ink);
+      max-width: 32vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .mobile-quote {
+      flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-end;
+      background: none; border: none; box-shadow: none; padding: 0;
+      cursor: pointer; user-select: none;
+    }
+    .mobile-quote .dq-text { font-size: 12px; line-height: 1.5; color: var(--ink); max-width: 100%; text-align: right;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+    .mobile-quote .dq-author { font-size: 10px; line-height: 1.4; color: var(--muted); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .bottom-nav {
       display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
       background: var(--surface); border-top: 1px solid var(--line);
@@ -434,6 +493,8 @@
     .bn-item.active { color: var(--green); }
     .grid-2, .board { grid-template-columns: 1fr; }
     .grid-3 { grid-template-columns: 1fr; }
+    /* 移动端单标签：一行一张卡片，列高与「全部」模式一致（414px，一页恰好 4 张），分页照常 */
+    .board.single .col-body { grid-template-columns: 1fr; }
     .page-head h1 { font-size: 21px; }
     .cal-grid { gap: 3px; }
     .cal-dow { font-size: 10px; padding: 2px 0; }
@@ -515,6 +576,17 @@
 </head>
 <body>
 <div class="layout">
+  <!-- 移动端顶栏：账号与每日名言以纯文本内嵌顶部通栏，仅工作台页显示，切其他页隐藏 -->
+  <div class="mobile-topbar" id="mobileTopbar">
+    <button class="mobile-account" id="mobileAccount" title="账号与资料" aria-label="账号与资料">
+      <img id="mobileAva" src="logo.jpeg" alt="头像">
+      <span class="ma-name" id="mobileBrand">尘墨工坊</span>
+    </button>
+    <div class="mobile-quote" id="mobileQuote" title="点击换一条">
+      <div class="dq-text" id="mqText"></div>
+      <div class="dq-author" id="mqAuthor"></div>
+    </div>
+  </div>
   <!-- 侧栏 -->
   <aside class="sidebar" id="sidebar">
     <div class="brand" id="brand" title="点击编辑工作台资料">
@@ -574,11 +646,15 @@
           <h2>📌 今日重点 <span class="count" id="todoCount"></span></h2>
           <div class="quick-add">
             <input class="flex" id="todoInput" placeholder="添加今天要做的事…" />
-            <select id="todoPri" style="width:auto">
-              <option value="high">高</option>
-              <option value="mid" selected>中</option>
-              <option value="low">低</option>
-            </select>
+            <div class="pri-select" id="todoPriWrap">
+              <select id="todoPri">
+                <option value="high">高</option>
+                <option value="mid" selected>中</option>
+                <option value="low">低</option>
+              </select>
+              <button type="button" class="pri-btn" aria-label="选择优先级"><span class="pri-txt">中</span></button>
+              <div class="pri-menu"></div>
+            </div>
             <button class="btn" id="todoAdd">添加</button>
           </div>
           <div class="filters" id="todoFilters">
@@ -873,7 +949,7 @@ async function pushKey(k, items){
 
 function save(k){
   if (_guest) return; /* 游客模式：所有写操作直接跳过，不碰云端 */
-  if (!_cloudReady){ _failed.add(k); syncState('error', '云端尚未连接'); return; }
+  if (!_cloudReady){ _failed.add(k); syncState('connecting'); return; } /* 云端尚未就绪：先记账，启动完成后自动补存（见 boot） */
   _pending.add(k); syncState('saving');
   clearTimeout(_saveTimers[k]);
   _saveTimers[k] = setTimeout(async () => {
@@ -904,6 +980,21 @@ async function cloudSeed(){
 
 function applyMap(map){
   KEYS.forEach(k => { DB[k] = Array.isArray(map[k]) ? map[k] : []; });
+}
+
+/* 启动载入：整体覆盖 + 对「等待云端期间已改动过」的键按 id 合并。
+   手机冷启动时云端返回较慢，用户可能在这几秒内就填好了内容并点保存；
+   若此时直接覆盖，本地新增条目会被云端旧数据抹掉（表现为「首次填写被吞」） */
+function mergeMap(map){
+  const pendingKeys = [..._failed];
+  KEYS.forEach(k => {
+    const cloud = Array.isArray(map[k]) ? map[k] : [];
+    if (pendingKeys.indexOf(k) < 0){ DB[k] = cloud; return; }
+    const ids = {};
+    cloud.forEach(x => { if (x && x.id) ids[x.id] = 1; });
+    const localOnly = (DB[k] || []).filter(x => x && !ids[x.id]);
+    DB[k] = localOnly.concat(cloud);
+  });
 }
 
 /* ============ 多设备同步：定时拉取 ============ */
@@ -954,6 +1045,9 @@ function goPage(p){
   $$('.page').forEach(s => s.classList.toggle('active', s.id === 'page-' + p));
   $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.page === p));
   $$('.bn-item').forEach(b => b.classList.toggle('active', b.dataset.page === p));
+  /* 移动端顶栏（账号 + 每日名言）只在工作台页出现，切到其他页整体隐藏 */
+  const mtb = $('#mobileTopbar');
+  if (mtb) mtb.classList.toggle('hide', p !== 'home');
   if (p === 'home') renderHome();
   if (p === 'ideas') renderIdeas();
   if (p === 'board') renderBoard();
@@ -1059,11 +1153,15 @@ function editTodo(id){
   const t = DB.todos.find(x=>x.id===id); if(!t) return;
   openModal(`<h3>编辑待办</h3>
     <div class="form-row"><label>内容</label><input id="mText" value="${esc(t.text)}"></div>
-    <div class="form-row"><label>优先级</label><select id="mPri">
+    <div class="form-row"><label>优先级</label><div class="pri-select" id="mPriWrap">
+      <select id="mPri">
       <option value="high" ${t.pri==='high'?'selected':''}>高</option>
       <option value="mid" ${t.pri==='mid'?'selected':''}>中</option>
-      <option value="low" ${t.pri==='low'?'selected':''}>低</option></select></div>
+      <option value="low" ${t.pri==='low'?'selected':''}>低</option></select>
+      <button type="button" class="pri-btn" aria-label="选择优先级"><span class="pri-txt"></span></button>
+      <div class="pri-menu"></div></div></div>
     <div class="modal-acts"><button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" id="mSave">保存</button></div>`);
+  initPriSelect('mPriWrap');
   $('#mSave').onclick = () => { t.text=$('#mText').value.trim()||t.text; t.pri=$('#mPri').value; save('todos'); closeModal(); renderTodos(); renderStats(); };
 }
 
@@ -1303,9 +1401,11 @@ const COLS = [
 ];
 function renderBoard(skipFit){
   const board=$('#board');
-  board.innerHTML = COLS.map(col=>{
+  board.classList.toggle('single', boardFilter !== 'all');
+  board.innerHTML = COLS
+    .filter(col => boardFilter === 'all' || boardFilter === col.key)
+    .map(col=>{
     let items = DB.contents.filter(c=>c.status===col.key);
-    if (boardFilter!=='all' && boardFilter!==col.key) items=[];
     const st = boardPg[col.key];
     const pages = Math.max(1, Math.ceil(items.length / st.size));
     if (st.page > pages) st.page = pages;
@@ -1558,6 +1658,44 @@ function closeModal(){ $('#overlay').classList.remove('show'); }
 $('#overlay').addEventListener('click', e=>{ if(e.target===$('#overlay')) closeModal(); });
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 
+/* ============ 自定义优先级下拉 ============ */
+/* 真机浏览器里原生 select 会弹系统样式单选框（深色、与主题不符），
+   改用站内面板；原生 select 隐藏保留在 DOM，既有 .value 读取不受影响 */
+function initPriSelect(wrapId){
+  const wrap = document.getElementById(wrapId);
+  if (!wrap || wrap.dataset.priInit) return;
+  const sel = wrap.querySelector('select');
+  const txt = wrap.querySelector('.pri-txt');
+  const menu = wrap.querySelector('.pri-menu');
+  if (!sel || !txt || !menu) return;
+  wrap.dataset.priInit = '1';
+  menu.innerHTML = [...sel.options].map(o =>
+    '<button type="button" class="pri-opt" data-v="' + o.value + '">' + o.textContent + '</button>').join('');
+  function sync(){
+    const opt = sel.options[sel.selectedIndex];
+    txt.textContent = opt ? opt.textContent : '';
+    menu.querySelectorAll('.pri-opt').forEach(o => o.classList.toggle('sel', o.dataset.v === sel.value));
+  }
+  wrap.querySelector('.pri-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    const wasOpen = wrap.classList.contains('open');
+    document.querySelectorAll('.pri-select.open').forEach(w => w.classList.remove('open'));
+    if (!wasOpen) wrap.classList.add('open');
+  });
+  menu.addEventListener('click', e => {
+    const o = e.target.closest('.pri-opt'); if (!o) return;
+    sel.value = o.dataset.v;
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+    sync();
+    wrap.classList.remove('open');
+  });
+  sync();
+}
+document.addEventListener('click', () => {
+  document.querySelectorAll('.pri-select.open').forEach(w => w.classList.remove('open'));
+});
+initPriSelect('todoPriWrap');
+
 /* ============ 主题切换 ============ */
 function applyTheme(t){
   document.body.dataset.theme = t;
@@ -1612,6 +1750,7 @@ async function boot(){
     applyMap(SAMPLE);
     _cloudReady = false;
     syncState('saved'); bootDone(); renderHome();
+    renderQuote(); /* 先用本地词库立即显示，避免等云端时空白 */
     await loadDayQuotes(); renderQuote();
     return;
   }
@@ -1619,8 +1758,10 @@ async function boot(){
     const map = await cloudLoadAll();
     const isEmpty = KEYS.every(k => !Array.isArray(map[k]) || !map[k].length);
     if (isEmpty){ await cloudSeed(); applyMap(await cloudLoadAll()); }
-    else applyMap(map);
+    else mergeMap(map);
     _cloudReady = true; syncState('saved'); bootDone(); renderHome(); startSyncPolling();
+    if (_failed.size) retryFailed(); /* 云端就绪前用户已提交但被拒的改动，这里自动补存 */
+    renderQuote(); /* 先用本地词库立即显示，避免等云端时空白 */
     await loadDayQuotes(); /* 取当天中西各五条 */
     renderQuote();
   }catch(err){
@@ -1707,11 +1848,21 @@ function quoteClock(){
 }
 
 function applyQuote(q){
-  $('#dqText').textContent = q[0];
-  $('#dqAuthor').textContent = '—— ' + q[1];
-  const box = $('#dailyQuote');
-  box.dataset.pos = ((_quoteClock.slot + quoteOffset) % 10 + 10) % 10;
-  box.classList.remove('dq-anim'); void box.offsetWidth; box.classList.add('dq-anim');
+  /* 桌面侧栏与移动端顶栏两处同步渲染 */
+  [[$('#dqText'), $('#dqAuthor')], [$('#mqText'), $('#mqAuthor')]].forEach(pair=>{
+    if (pair[0]) pair[0].textContent = q[0];
+    if (pair[1]) pair[1].textContent = '—— ' + q[1];
+  });
+  ['#dailyQuote', '#mobileQuote'].forEach(sel=>{
+    const box = $(sel); if (!box) return;
+    box.dataset.pos = ((_quoteClock.slot + quoteOffset) % 10 + 10) % 10;
+    box.classList.remove('dq-anim'); void box.offsetWidth; box.classList.add('dq-anim');
+  });
+  /* 移动端顶栏高度随名言行数变化，同步给主内容上边距（避免长名言压住标题） */
+  const tb = $('#mobileTopbar');
+  if (tb && window.innerWidth <= 1023){
+    document.documentElement.style.setProperty('--tbh', tb.offsetHeight + 'px');
+  }
 }
 
 function renderQuote(){
@@ -1733,10 +1884,20 @@ async function loadDayQuotes(){
   }catch(e){ /* 网络异常时保留本地词库兜底 */ }
 }
 
-/* 点击：在当天 10 条内依次切换（中西交替），点满 10 次回到起点 */
-$('#dailyQuote').addEventListener('click', function(){
-  quoteOffset = (quoteOffset + (dayQuotes.length || 10) + 1) % (dayQuotes.length || 10);
-  renderQuote();
+/* 点击：在当天 10 条内依次切换（中西交替），点满 10 次回到起点（侧栏与移动端顶栏均可点） */
+[$('#dailyQuote'), $('#mobileQuote')].forEach(el=>{
+  if (!el) return;
+  el.addEventListener('click', function(){
+    quoteOffset = (quoteOffset + (dayQuotes.length || 10) + 1) % (dayQuotes.length || 10);
+    renderQuote();
+  });
+});
+/* 横竖屏切换 / 窗口尺寸变化时重新同步顶栏高度 */
+window.addEventListener('resize', function(){
+  const tb = $('#mobileTopbar');
+  if (tb && window.innerWidth <= 1023){
+    document.documentElement.style.setProperty('--tbh', tb.offsetHeight + 'px');
+  }
 });
 
 /* 每分钟检查：跨天→换全新 10 条并回到起点；跨时段→自动换下一条 */
@@ -1744,6 +1905,7 @@ setInterval(async function(){
   const ck = quoteClock();
   if (ck.dayKey !== _quoteClock.dayKey){
     _quoteClock = ck; quoteOffset = 0; dayQuotes = [];
+    renderQuote(); /* 跨天先显示本地词库，等云端新一批 10 条回来再替换 */
     await loadDayQuotes();
     renderQuote();
   }else if (ck.slot !== _quoteClock.slot){
@@ -1791,6 +1953,8 @@ function applyProfile(){
   $('#brandName').textContent = p.name || DEFAULT_PROFILE.name;
   $('#brandSub').textContent = p.sub || DEFAULT_PROFILE.sub;
   $('#brandLogo').src = p.avatar || 'logo.jpeg';
+  const mAva = $('#mobileAva'); if (mAva) mAva.src = p.avatar || 'logo.jpeg';
+  const mBrand = $('#mobileBrand'); if (mBrand) mBrand.textContent = p.name || DEFAULT_PROFILE.name;
   document.title = APP_NAME;
 }
 
@@ -1911,7 +2075,8 @@ $('#guestBtn').addEventListener('click', () => {
 /* ---- 资料编辑（点侧栏品牌区打开） ---- */
 let _profAvatar = null; /* null = 未改动 */
 bindAvaPicker($('#profAva'), $('#profAvaFile'), d => { _profAvatar = d; $('#profAva').innerHTML = '<img src="' + d + '" alt="头像">'; });
-$('#brand').addEventListener('click', () => {
+/* 打开资料弹窗：侧栏品牌区与移动端左上角头像按钮共用 */
+function openProfileModal(){
   const p = getProfile();
   $('#profName').value = p.name;
   $('#profSub').value = p.sub;
@@ -1919,7 +2084,9 @@ $('#brand').addEventListener('click', () => {
   $('#profAva').innerHTML = p.avatar ? '<img src="' + p.avatar + '" alt="头像">' : '<img src="logo.jpeg" alt="默认头像">';
   $('#profErr').textContent = '';
   $('#profMask').classList.remove('hidden');
-});
+}
+$('#brand').addEventListener('click', openProfileModal);
+$('#mobileAccount').addEventListener('click', openProfileModal);
 $('#profCancel').addEventListener('click', () => $('#profMask').classList.add('hidden'));
 $('#profForm').addEventListener('submit', async e => {
   e.preventDefault();
