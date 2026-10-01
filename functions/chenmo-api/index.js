@@ -9,6 +9,7 @@ const ENV = 'chenmo-d9gcmpopbed61c597';
 const COL = 'workbench_state';
 const USERS_COL = 'chenmo_users';      /* 账号：_id = 小写账号名 */
 const SESS_COL = 'chenmo_sessions';    /* 会话：_id = token */
+const WXBIND_COL = 'chenmo_wxbind';    /* 微信绑定：_id = openid，值 = { uid } */
 const KEYS = ['todos', 'ideas', 'contents', 'reviews'];
 const LEGACY_UID = 'chenmo';           /* 加账号前的老数据归属：首个账号自动继承 */
 const TOKEN_TTL = 90 * 24 * 3600 * 1000; /* 登录态 90 天 */
@@ -300,6 +301,22 @@ function quoteIndexAt(dayKey, slot) {
 
 /* ============ 账号体系：加盐哈希 + 会话 token ============ */
 function uidOf(user) { return String(user || '').trim().toLowerCase(); }
+
+/* ============ 微信身份（小程序端专用） ============
+   两条链路天然隔离：
+   - 网页版走 HTTP 访问服务 → 平台不注入微信上下文，本函数拿不到 openid
+   - 小程序走 wx.cloud.callFunction → 平台注入进程环境变量 WX_OPENID
+   因此「HTTP 请求里带 openid」一律不认，避免伪造他人身份登录。 */
+function wxOpenid(event) {
+  if (event && event.httpMethod) return '';
+  const fromEnv = process.env.WX_OPENID || process.env.OPENID || '';
+  if (fromEnv) return String(fromEnv).trim();
+  const ui = (event && event.userInfo) || {};
+  const fromInfo = ui.openId || ui.OPENID || ui.openid || '';
+  if (fromInfo) return String(fromInfo).trim();
+  /* 最后兜底：非 HTTP 调用只可能来自本环境绑定的小程序，允许显式传入 */
+  return String((event && event.openid) || '').trim();
+}
 function newSalt() { return crypto.randomBytes(16).toString('hex'); }
 function hashOf(pass, salt) { return crypto.scryptSync(String(pass), salt, 32).toString('hex'); }
 function safeEq(a, b) {
@@ -365,7 +382,7 @@ async function claimLegacy(db, uid) {
   return legacy;
 }
 
-exports.main = async function (event) {
+async function handle(event) {
   const hd = event.headers || {};
   const origin = hd.origin || hd.Origin || '';
   const headers = corsHeaders(origin);
@@ -422,6 +439,54 @@ exports.main = async function (event) {
       }
       const token = await issueToken(db, uid);
       return resp(200, headers, { ok: true, token: token, profile: publicProfile(u) });
+    }
+
+    /* ---------- 小程序：微信身份 ↔ 账号（一次绑定，之后免密） ---------- */
+    if (action === 'wxlogin' || action === 'wxbind' || action === 'wxunbind') {
+      const openid = wxOpenid(event);
+      if (!openid) {
+        return resp(200, headers, {
+          ok: false, needWx: true,
+          error: '未取到微信身份（该接口只在小程序内可用，网页版请用账号密码登录）'
+        });
+      }
+
+      /* 微信一键登录：已绑过就换发登录态，没绑过让前端引导绑定 */
+      if (action === 'wxlogin') {
+        const bind = await getDoc(db, WXBIND_COL, openid);
+        if (bind && bind.uid) {
+          const u = await getUser(db, bind.uid);
+          if (!u) {
+            try { await db.collection(WXBIND_COL).doc(openid).remove(); } catch (e) {}
+            return resp(200, headers, { ok: true, bound: false, error: '绑定的账号已不存在，请重新绑定' });
+          }
+          const token = await issueToken(db, bind.uid);
+          try { await db.collection(WXBIND_COL).doc(openid).update({ last_login: new Date().toISOString() }); } catch (e) {}
+          return resp(200, headers, { ok: true, bound: true, token: token, profile: publicProfile(u) });
+        }
+        return resp(200, headers, { ok: true, bound: false });
+      }
+
+      /* 首次绑定：必须验账号密码，防止别人把自己的微信绑到你的账号上 */
+      if (action === 'wxbind') {
+        const uid = uidOf(body.user);
+        const u = await getUser(db, uid);
+        if (!u || !u.salt || !safeEq(hashOf(String(body.pass || ''), u.salt), u.hash)) {
+          return resp(200, headers, { ok: false, error: '账号或密码不对' });
+        }
+        const now = new Date().toISOString();
+        await db.collection(WXBIND_COL).doc(openid).set({
+          openid: openid, uid: uid, created_at: now, last_login: now
+        });
+        const token = await issueToken(db, uid);
+        return resp(200, headers, { ok: true, bound: true, token: token, profile: publicProfile(u) });
+      }
+
+      /* 解绑：换微信号/换手机时用，需登录态；账号数据本身不受影响 */
+      const a = await authUser(db, body.token);
+      if (!a) return resp(200, headers, { ok: false, needAuth: true, error: '登录已过期，请重新登录' });
+      try { await db.collection(WXBIND_COL).doc(openid).remove(); } catch (e) {}
+      return resp(200, headers, { ok: true, unbound: true });
     }
 
     /* ---------- 会话校验：拿 token 换资料（前端启动时验活） ---------- */
@@ -528,4 +593,16 @@ exports.main = async function (event) {
   } catch (e) {
     return resp(200, headers, { ok: false, error: String((e && e.message) || e) });
   }
+}
+
+/* 出口适配：网页版经 HTTP 访问服务调用，需要 { statusCode, headers, body } 包装；
+   小程序 wx.cloud.callFunction 则期望直接拿到业务对象，这里统一把包装拆掉，
+   两种链路共用同一套业务分支，不必写两遍。 */
+exports.main = async function (event) {
+  const e = event || {};
+  const r = await handle(e);
+  if (!e.httpMethod && r && typeof r === 'object' && typeof r.body === 'string') {
+    try { return JSON.parse(r.body); } catch (err) { return { ok: false, error: '响应解析失败' }; }
+  }
+  return r;
 };

@@ -1,5 +1,5 @@
 {
-  "description": "创作工坊 · 微信小程序（界面演示版）",
+  "description": "创作工坊 · 微信小程序（已接入云端：微信一键登录 + 与网页版共用同一份数据）",
   "appid": "touristappid",
   "projectname": "chenmo-studio-miniprogram",
   "compileType": "miniprogram",
