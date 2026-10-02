@@ -50,7 +50,7 @@ onMounted(loadScan)
           <div class="num big">{{ scan.sessions.total }}</div>
           <div class="muted">个有效会话，其中 <b class="warn">{{ scan.sessions.expired }}</b> 个已过期</div>
         </div>
-        <button class="btn block" style="margin-top: 12px;" :disabled="busy || !scan.sessions.expired" @click="run('cleanSessions', '清理过期会话')">
+        <button class="btn block" style="margin-top: 12px;" :disabled="!!busy || !scan.sessions.expired" @click="run('cleanSessions', '清理过期会话')">
           <span v-if="busy === 'cleanSessions'"><i class="spin"></i> 清理中…</span>
           <span v-else>清理过期会话</span>
         </button>
@@ -63,7 +63,7 @@ onMounted(loadScan)
           <div class="num big">{{ scan.verify.total }}</div>
           <div class="muted">条记录，其中 <b class="warn">{{ scan.verify.expired }}</b> 条已过期</div>
         </div>
-        <button class="btn block" style="margin-top: 12px;" :disabled="busy || !scan.verify.expired" @click="run('cleanVerify', '清理过期验证码')">
+        <button class="btn block" style="margin-top: 12px;" :disabled="!!busy || !scan.verify.expired" @click="run('cleanVerify', '清理过期验证码')">
           <span v-if="busy === 'cleanVerify'"><i class="spin"></i> 清理中…</span>
           <span v-else>清理过期验证码</span>
         </button>
@@ -76,7 +76,7 @@ onMounted(loadScan)
           <div class="num big">{{ scan.adminSessions }}</div>
           <div class="muted">个管理员登录态（含当前这个）</div>
         </div>
-        <button class="btn danger block" style="margin-top: 12px;" :disabled="busy" @click="run('cleanAdminSessions', '登出全部管理员')">
+        <button class="btn danger block" style="margin-top: 12px;" :disabled="!!busy" @click="run('cleanAdminSessions', '登出全部管理员')">
           <span v-if="busy === 'cleanAdminSessions'"><i class="spin"></i> 处理中…</span>
           <span v-else>全部登出</span>
         </button>
