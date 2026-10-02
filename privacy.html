@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>隐私政策与用户协议 · 创作工坊</title>
+<meta name="description" content="创作工坊（尘墨工坊）的隐私政策与用户协议，说明收集的信息、用途、存储方式、用户权利与联系方式。">
+<style>
+  :root{
+    --bg:#0f1419; --surface:#161c23; --surface-2:#1e262f; --line:#2a333d;
+    --ink:#e8eef3; --muted:#93a1ad; --green:#3fb98a; --red:#e2695f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    font-size:15px;line-height:1.85;}
+  .wrap{max-width:720px;margin:0 auto;padding:36px 22px 72px;}
+  .back{color:var(--muted);font-size:13px;text-decoration:none}
+  .back:hover{color:var(--ink)}
+  h1{font-size:26px;font-weight:600;margin:18px 0 6px;line-height:1.4}
+  .meta{color:var(--muted);font-size:13px;margin-bottom:26px}
+  h2{font-size:19px;font-weight:600;margin:38px 0 10px;padding-top:18px;border-top:1px solid var(--line)}
+  h2:first-of-type{border-top:none;padding-top:0}
+  h3{font-size:15px;font-weight:600;margin:22px 0 6px}
+  p{margin:8px 0}
+  ul{margin:8px 0;padding-left:22px}
+  li{margin:5px 0}
+  a{color:var(--green)}
+  .note{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--green);
+    border-radius:10px;padding:12px 16px;margin:16px 0;font-size:14px;color:var(--muted)}
+  .warn{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--red);
+    border-radius:10px;padding:12px 16px;margin:16px 0;font-size:14px;color:var(--muted)}
+  .toc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:20px 0}
+  .toc a{display:inline-block;margin-right:16px;font-size:13px;text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+  footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+  code{background:var(--surface-2);padding:1px 5px;border-radius:4px;font-size:13px}
+  @media(max-width:520px){
+    .wrap{padding:26px 16px 56px}
+    h1{font-size:22px} h2{font-size:17px} body{font-size:14px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="./index.html">← 返回创作工坊</a>
+
+  <h1>隐私政策与用户协议</h1>
+  <div class="meta">生效日期：2026 年 10 月 2 日　·　最近一次更新：2026 年 10 月 2 日</div>
+
+  <div class="toc">
+    <a href="#privacy">一、隐私政策</a>
+    <a href="#terms">二、用户协议</a>
+    <a href="#contact">三、联系我们</a>
+  </div>
+
+  <p>「创作工坊」（下称"本服务"）是一个用于记录灵感、管理待办、跟踪内容进度与做周复盘的个人创作工作台。本文件说明我们如何处理你的信息，请先阅读再使用。</p>
+
+  <h2 id="privacy">一、隐私政策</h2>
+
+  <h3>1. 我们收集哪些信息</h3>
+  <p>遵循最小必要原则，只收集提供服务所必需的信息：</p>
+  <ul>
+    <li><b>注册信息</b>：账号名、密码。密码不会明文保存，服务端只保存经加盐哈希后的摘要，我们无法还原你的原始密码。</li>
+    <li><b>展示信息</b>：工作台名称、副标题、头像图片（以上均由你主动填写或上传，可留空）。</li>
+    <li><b>找回凭证</b>：密保邮箱（可选绑定）。仅在你主动申请找回密码时用于接收验证码。</li>
+    <li><b>第三方登录标识</b>：若你使用微信小程序登录，我们会接收微信提供的 <code>openid</code> 用于识别身份，不会获取你的微信昵称、头像以外的资料，也不获取好友关系。</li>
+    <li><b>你写入的内容</b>：待办、灵感、内容进度、复盘记录——这是本服务的核心数据。</li>
+    <li><b>运行必要信息</b>：登录成功后随机生成的会话令牌，以及最后登录时间。</li>
+  </ul>
+
+  <h3>2. 这些信息用来做什么</h3>
+  <p>仅用于：完成注册登录、在多设备间同步你的数据、在你发起请求时验证身份、在你遗忘密码时协助找回，以及保障服务安全（例如识别异常登录）。</p>
+  <p>我们<b>不会</b>将你的个人信息用于广告投放或自动化营销决策，<b>不会</b>出售或交换给第三方。</p>
+
+  <h3>3. 存储地点与安全措施</h3>
+  <ul>
+    <li>数据存储在中国境内的云服务商机房（腾讯云开发，上海地域），传输过程全程加密。</li>
+    <li>密码采用带随机盐的抗暴力破解哈希算法存储，每个账号的盐独立生成。</li>
+    <li>登录失败超过一定次数会临时锁定该账号，防止密码被反复试猜。</li>
+    <li>接口按账号标识隔离数据，正常情况下你的账号只能读到自己的内容。</li>
+  </ul>
+
+  <div class="warn">
+    <b>关于运营者的访问边界（请务必知悉）</b><br>
+    本服务为个人开发者运营。从技术架构上说，直接持有服务后台密钥的人员能够读取服务器上的用户数据。
+    我们<b>不会主动查阅</b>你的创作内容；仅在下列情形可能接触：
+    <ul style="margin-bottom:0">
+      <li>你主动请求技术支持并授权我们排查；</li>
+      <li>法律法规明确要求或主管部门依法调取；</li>
+      <li>为保障服务安全而进行的必要故障处置。</li>
+    </ul>
+    如果你对这一点无法接受，请不要在本服务中写入敏感信息，或使用纯本地存储的工具替代。
+  </div>
+
+  <h3>4. 你的权利</h3>
+  <p>你可以随时自助行使以下权利，无需联系客服、无需等待：</p>
+  <ul>
+    <li><b>查阅与更正</b>：在工作台侧栏点击头像进入「工作台资料」，查看并修改名称、副标题、头像、密保邮箱。</li>
+    <li><b>删除单条内容</b>：在各模块卡片上直接删除。</li>
+    <li><b>注销账号</b>：「工作台资料」底部「注销账号」，验证密码后即可永久删除账号及其全部数据。</li>
+    <li><b>撤回第三方授权</b>：在小程序「工作台资料 → 解除微信绑定」，或在微信授权管理中取消。</li>
+  </ul>
+  <p>注销成功后，你的账号资料、会话、内容数据与第三方绑定关系会被<b>立即删除</b>，系统备份中的残留数据也会在合理期限内清理完毕，不会留存或复用。</p>
+
+  <h3>5. 保留期限</h3>
+  <p>账号存续期间持续为你保存数据；账号注销后立即删除。法律要求必须留存的日志类信息，会在达到留存期限后删除或匿名化处理。</p>
+
+  <h3>6. 未成年人</h3>
+  <p>本服务主要面向成年创作者。若你是未满 14 周岁的未成年人，请在监护人陪同下阅读本文件，并取得监护人同意后再注册使用。</p>
+
+  <h3>7. 政策更新</h3>
+  <p>若本文件发生实质变更，我们会在服务内以显著方式提示。继续使用即视为同意更新后的内容；如不同意，请停止使用并注销账号。</p>
+
+  <h2 id="terms">二、用户协议</h2>
+
+  <h3>1. 服务内容</h3>
+  <p>本服务提供灵感记录、待办管理、内容进度跟踪与复盘的个人工作台功能，支持网页端与微信小程序端，数据在多端之间同步。</p>
+
+  <h3>2. 账号规范</h3>
+  <ul>
+    <li>账号名需 6–20 位、以字母开头，仅可包含字母、数字、下划线与中划线。</li>
+    <li>请自行保管好密码与密保邮箱，因密码泄露造成的损失由账号持有人自行承担。</li>
+    <li>一个账号仅限本人使用，请勿出借、出售或转让。</li>
+  </ul>
+
+  <h3>3. 使用规范</h3>
+  <p>请勿利用本服务制作、存储或传播违反中华人民共和国法律法规的内容，包括但不限于危害国家安全、淫秽色情、赌博诈骗、侵犯他人知识产权或名誉的内容。</p>
+  <p>违反上述约定的，我们有权视情况限制功能、停用或注销相关账号；涉嫌违法的，将依法向有关部门报告。</p>
+
+  <h3>4. 服务可用性与免责</h3>
+  <p>本服务由个人开发者在业余时间维护，依赖第三方云服务商。我们努力保障稳定运行，但不对以下情形承担责任：</p>
+  <ul>
+    <li>云服务商故障、网络中断、不可抗力导致的服务中断；</li>
+    <li>因你自身操作失误导致的数据丢失；</li>
+    <li>因设备丢失、中毒或密码泄露造成的账号被盗用。</li>
+  </ul>
+  <p class="note">建议你养成定期导出重要内容的习惯，重要创作请自行留存副本。</p>
+
+  <h3>5. 终止与变更</h3>
+  <p>你可以随时注销账号终止本服务。若因政策、技术或运营原因需要下线服务，我们会尽力提前公告，并为用户提供导出数据的合理窗口。</p>
+
+  <h2 id="contact">三、联系我们</h2>
+  <p>若对本文件有任何疑问、意见或投诉，或需要行使上述权利，可通过以下方式联系：</p>
+  <ul>
+    <li>邮箱：13664903728@163.com</li>
+  </ul>
+  <p>我们会在收到请求后的合理期限内予以答复。</p>
+
+  <footer>
+    本文件最后更新于 2026 年 10 月 2 日。<br>
+    以上条款为通用模板，正式对外发布前请结合自身运营情况复核，必要时咨询专业法律意见。
+  </footer>
+</div>
+</body>
+</html>

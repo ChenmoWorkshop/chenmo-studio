@@ -437,6 +437,14 @@ const CODE_TTL = 10 * 60 * 1000;         /* 验证码 10 分钟有效 */
 const CODE_SEND_COOLDOWN = 60 * 1000;    /* 同一目标 60 秒最多一条 */
 const CODE_DAILY_LIMIT = 5;              /* 同一目标每天最多 5 条 */
 const CODE_MAX_ATTEMPTS = 5;             /* 验证码最多试错 5 次 */
+
+/* 登录防爆破：同一账号连续输错密码达上限就冷却一段时间。
+   为什么必须有：静态页里写死了云函数地址，任何人都能脱离页面直接构造请求，
+   没有这一层，别人可以无限次试密码（行业术语叫撞库），弱密码迟早被撞开。
+   计数落在 chenmo_verify 且带 exp，运维页原有的"清理过期验证码"会顺带清掉。 */
+const LOGIN_MAX_FAILS = 5;
+const LOGIN_LOCK_MS = 10 * 60 * 1000;
+const GUARD_PREFIX = 'lock__';
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 function smtpReady() { return !!(process.env.SMTP_USER && process.env.SMTP_PASS); }
@@ -505,6 +513,41 @@ async function checkEmailCode(db, purpose, uid, code) {
     throw new Error('验证码不对');
   }
   try { await db.collection(VERIFY_COL).doc(id).remove(); } catch (e) {}
+}
+
+/* ---------- 登录防爆破 ---------- */
+/* 返回 { ok: true } 或 { ok: false, wait: 剩余秒数 } */
+async function loginGuardCheck(db, uid) {
+  const g = await getDoc(db, VERIFY_COL, GUARD_PREFIX + uid);
+  if (!g) return { ok: true };
+  if (g.locked_until && Date.now() < g.locked_until) {
+    return { ok: false, wait: Math.ceil((g.locked_until - Date.now()) / 1000) };
+  }
+  return { ok: true, fails: g.fails || 0 };
+}
+
+/* 记录一次失败；返回剩余可尝试次数（0 表示已触发冷却） */
+async function loginGuardFail(db, uid) {
+  const id = GUARD_PREFIX + uid;
+  const now = Date.now();
+  const g = await getDoc(db, VERIFY_COL, id);
+  const fails = ((g && g.fails) || 0) + 1;
+  const patch = {
+    purpose: 'lock', uid: uid, fails: fails,
+    exp: now + LOGIN_LOCK_MS,                     /* 过期后由运维页清理 */
+    updated_at: new Date().toISOString()
+  };
+  if (fails >= LOGIN_MAX_FAILS) patch.locked_until = now + LOGIN_LOCK_MS;
+  try {
+    if (g) await db.collection(VERIFY_COL).doc(id).update(patch);
+    else await db.collection(VERIFY_COL).doc(id).set(patch);
+  } catch (e) {}
+  return Math.max(0, LOGIN_MAX_FAILS - fails);
+}
+
+/* 登录成功后清零，避免用户正常使用时累积到被锁 */
+async function loginGuardClear(db, uid) {
+  try { await db.collection(VERIFY_COL).doc(GUARD_PREFIX + uid).remove(); } catch (e) {}
 }
 
 /* 邮箱是否已被其他账号绑定 */
@@ -832,13 +875,35 @@ async function handle(event) {
     /* ---------- 登录 ---------- */
     if (action === 'login') {
       const uid = uidOf(body.user);
+
+      /* 先看是否被冷却：冷却期内直接拒绝，连密码都不比对 */
+      const guard = await loginGuardCheck(db, uid);
+      if (!guard.ok) {
+        return resp(200, headers, {
+          ok: false, locked: true,
+          error: '密码错得太多了，请 ' + Math.ceil(guard.wait / 60) + ' 分钟后再试'
+        });
+      }
+
       const u = await getUser(db, uid);
       if (!u || !u.salt || !safeEq(hashOf(String(body.pass || ''), u.salt), u.hash)) {
-        return resp(200, headers, { ok: false, error: '账号或密码不对' });
+        const left = await loginGuardFail(db, uid);
+        if (left <= 0) {
+          return resp(200, headers, {
+            ok: false, locked: true,
+            error: '密码错得太多了，请 ' + (LOGIN_LOCK_MS / 60000) + ' 分钟后再试'
+          });
+        }
+        return resp(200, headers, {
+          ok: false, left: left,
+          error: '账号或密码不对，还可以试 ' + left + ' 次'
+        });
       }
       if (u.banned) {
         return resp(200, headers, { ok: false, error: '该账号已被管理员停用，请联系作者处理' });
       }
+      await loginGuardClear(db, uid);
+      /* 以下原本的逻辑保持不变 */
       const token = await issueToken(db, uid);
       try { await db.collection(USERS_COL).doc(uid).update({ last_login: new Date().toISOString() }); } catch (e) {}
       return resp(200, headers, { ok: true, token: token, profile: publicProfile(u) });
@@ -917,6 +982,26 @@ async function handle(event) {
       await db.collection(USERS_COL).doc(a.uid).update(patch);
       const u = await getUser(db, a.uid);
       return resp(200, headers, { ok: true, profile: publicProfile(u || a.user) });
+    }
+
+    /* ---------- 用户自助注销：用户自己的合规权利，也是上架审核的硬性要求 ----------
+       双重把关：先验密码，再要求手输账号名，避免误触或别人在自己电脑上点一下就没了。 */
+    if (action === 'deleteAccount') {
+      const a = await authUser(db, body.token);
+      if (!a) return resp(200, headers, { ok: false, needAuth: true, error: '登录已过期，请重新登录' });
+      if (ADMIN_UID === a.uid) return resp(200, headers, { ok: false, error: '内置账号不可注销' });
+      const u = a.user;
+      if (!u.salt || !safeEq(hashOf(String(body.pass || ''), u.salt), u.hash)) {
+        return resp(200, headers, { ok: false, error: '密码不对，注销未执行' });
+      }
+      if (String(body.confirm || '').trim() !== String(u.user || '')) {
+        return resp(200, headers, { ok: false, error: '账号名输入不一致，注销未执行' });
+      }
+      const r = await purgeUser(db, a.uid);
+      return resp(200, headers, {
+        ok: true,
+        msg: '账号已注销，会话 ' + r.sessions + ' 条、数据 ' + r.data + ' 份、微信绑定 ' + r.wx + ' 条已全部清除'
+      });
     }
 
     /* ---------- 邮箱验证码：绑定密保邮箱 / 找回密码 ---------- */

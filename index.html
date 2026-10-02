@@ -564,6 +564,16 @@
   .auth-cancel { text-align: center; margin-top: 2px; }
   .auth-cancel button, .auth-guest { border: none; background: transparent; color: var(--muted); font-size: 12px; text-decoration: underline; text-align: center; }
   .auth-guest { display: block; margin: auto auto 0; padding-top: 10px; }
+  /* 注册时的协议勾选 */
+  .auth-agree { margin-top: 6px; }
+  .agree-check { display: flex; gap: 7px; align-items: flex-start; font-size: 12px; color: var(--muted); line-height: 1.5; cursor: pointer; }
+  .agree-check input { width: 14px; height: 14px; margin: 1px 0 0; flex: none; accent-color: var(--green); }
+  .agree-check a { color: var(--green); text-decoration: underline; }
+  /* 注销入口：默认折叠，展开后是红色危险区 */
+  .auth-danger { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; text-align: center; }
+  .auth-del-toggle { border: none; background: transparent; color: var(--muted); font-size: 11px; text-decoration: underline; }
+  .auth-del-toggle:hover { color: var(--red); }
+  .auth-btn-danger { background: var(--red); margin-top: 6px; }
   /* 手机竖屏：账号/名称/密码等双列改单列，输入框全宽更好操作 */
   @media (max-width: 640px) {
     .auth-row { grid-template-columns: 1fr; }
@@ -872,6 +882,12 @@
         <label>密码<input id="regPass" type="password" maxlength="40" placeholder="至少 6 位" required></label>
         <label>确认密码<input id="regPass2" type="password" maxlength="40" placeholder="再输入一次" required></label>
       </div>
+      <div class="auth-agree">
+        <label class="agree-check">
+          <input type="checkbox" id="regAgree">
+          <span>我已阅读并同意 <a href="privacy.html" target="_blank" rel="noopener">《隐私政策》</a> 与 <a href="privacy.html#terms" target="_blank" rel="noopener">《用户协议》</a></span>
+        </label>
+      </div>
       <div class="auth-err" id="regErr"></div>
       <button class="auth-btn" type="submit">创建账号</button>
     </form>
@@ -906,6 +922,18 @@
       <button class="auth-btn" type="submit">保存</button>
       <button class="auth-btn auth-btn-ghost" id="profLogout" type="button">退出登录</button>
       <div class="auth-cancel"><button id="profCancel" type="button">取消</button></div>
+
+      <!-- 注销账号：法规要求必须提供自助注销，且不得设置不合理障碍 -->
+      <div class="auth-danger" id="profDanger">
+        <button type="button" id="profDelToggle" class="auth-del-toggle">注销账号</button>
+        <div id="profDelBox" class="hidden">
+          <div class="auth-hint">注销后账号、登录态、密保邮箱、微信绑定，以及全部待办 / 灵感 / 内容进度 / 复盘记录都会被<b>永久删除且无法恢复</b>。</div>
+          <label>当前登录密码<input id="profDelPass" type="password" maxlength="40" placeholder="输入密码以确认是本人" autocomplete="off"></label>
+          <label>输入账号名 <b id="profDelWho"></b> 以确认<input id="profDelConfirm" maxlength="20" placeholder="重复一遍账号名" autocomplete="off"></label>
+          <div class="auth-err" id="profDelErr"></div>
+          <button type="button" class="auth-btn auth-btn-danger" id="profDelGo">确认注销，永久删除</button>
+        </div>
+      </div>
     </form>
   </div>
 </div>
@@ -2096,6 +2124,7 @@ $('#regForm').addEventListener('submit', async e => {
   if (!/^[A-Za-z][A-Za-z0-9_-]{5,19}$/.test(u)) return err.textContent = '账号需 6-20 位、字母开头，可含数字、下划线、中划线（同微信号规则）';
   if (p1.length < 6) return err.textContent = '密码至少 6 位';
   if (p1 !== p2) return err.textContent = '两次输入的密码不一致';
+  if (!$('#regAgree').checked) return err.textContent = '请先阅读并勾选同意《隐私政策》与《用户协议》';
   err.textContent = '';
   btn.disabled = true; const old = btn.textContent; btn.textContent = '正在创建…';
   try{
@@ -2265,6 +2294,12 @@ function openProfileModal(){
   $('#profEmail').placeholder = bound ? '已绑定 ' + bound + '，输入新邮箱可更换' : '未绑定，绑定后可自助找回密码';
   $('#profEmailNow').textContent = bound ? '当前绑定：' + bound : '';
   $('#profEmailCode').value = '';
+  /* 注销区：游客没有云端账号，不显示；打开时重置状态 */
+  $('#profDanger').classList.toggle('hidden', !!_guest);
+  $('#profDelBox').classList.add('hidden');
+  $('#profDelPass').value = '';
+  $('#profDelConfirm').value = '';
+  $('#profDelErr').textContent = '';
   $('#profMask').classList.remove('hidden');
 }
 $('#brand').addEventListener('click', openProfileModal);
@@ -2352,6 +2387,34 @@ $('#profLogout').addEventListener('click', async () => {
   try{ clearInterval(_pollTimer); }catch(e){}
   if (t){ try{ await api('logout', { token: t }); }catch(e){} }
   location.reload(); /* 回到账号门 */
+});
+
+/* ---- 自助注销：资料弹窗里的危险区，游客模式不显示 ---- */
+$('#profDelToggle').addEventListener('click', () => {
+  const box = $('#profDelBox');
+  box.classList.toggle('hidden');
+  $('#profDelWho').textContent = (SESSION && SESSION.user) || '';
+  $('#profDelErr').textContent = '';
+});
+$('#profDelGo').addEventListener('click', async () => {
+  const btn = $('#profDelGo'), err = $('#profDelErr');
+  const pass = $('#profDelPass').value, confirm = $('#profDelConfirm').value.trim();
+  err.textContent = '';
+  if (!pass) return err.textContent = '请输入当前登录密码';
+  if (!confirm) return err.textContent = '请输入账号名以确认';
+  btn.disabled = true; const old = btn.textContent; btn.textContent = '注销中…';
+  try{
+    const r = await api('deleteAccount', { pass: pass, confirm: confirm });
+    saveSession(null); SESSION = null; _guest = false; _cloudReady = false;
+    try{ clearInterval(_pollTimer); }catch(e){}
+    toast(r.msg || '账号已注销');
+    location.reload();
+  }catch(ex){
+    if (ex.needAuth){ sessionExpired(); return; }
+    err.textContent = ex.message || '注销失败，请稍后再试';
+  }finally{
+    btn.disabled = false; btn.textContent = old;
+  }
 });
 
 /* ---- 入口：有会话直接进（启动时校验 token），否则停在账号门 ---- */
