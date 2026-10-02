@@ -21,6 +21,7 @@
 ## 目录
 
 - [这是什么](#这是什么)
+- [界面速览](#界面速览)
 - [功能特性](#功能特性)
 - [技术架构](#技术架构)
 - [数据模型](#数据模型)
@@ -37,6 +38,18 @@
 - [踩坑记录](#踩坑记录)
 - [详细技术文档](docs/TECHNICAL.md)
 - [更新日志](CHANGELOG.md)
+
+## 界面速览
+
+**网页端**（暖纸主题，游客模式的示例数据）
+
+| 桌面端 | 移动端 |
+|---|---|
+| ![桌面端工作台](docs/images/01-workbench-desktop.png) | ![移动端工作台](docs/images/02-workbench-mobile.png) |
+
+**微信小程序**（与网页端同一账号、同一份数据）
+
+![小程序四页](docs/images/09-miniprogram.png)
 
 ## 这是什么
 
@@ -86,20 +99,7 @@
 
 ## 技术架构
 
-```
-┌─────────────────┐   ┌──────────────────┐   ┌─────────────────┐
-│ 网页 index.html │   │ 管理后台 admin/  │   │ 小程序 miniprogram/
-│ 单文件·零构建   │   │ Vue3 + Vite      │   │ 原生·云开发内网  │
-└────────┬────────┘   └────────┬─────────┘   └────────┬────────┘
-         │ HTTPS fetch          │ HTTPS fetch           │ wx.cloud.callFunction
-         └─────────────────────┼───────────────────────┘
-                               ▼
-              云函数 chenmo-api（Node.js · 管理员权限 · 下发 CORS）
-                               │
-                  校验 token / 管理员令牌 → 解析身份 → 按身份读写
-                               ▼
-                    CloudBase 文档数据库（五个集合）
-```
+![技术架构](docs/images/06-architecture.png)
 
 **为什么用云函数代理，而不是前端直连 JS SDK？**
 
@@ -118,6 +118,8 @@
 | 管理员 | 未配置 `ADMIN_KEY` 时所有管理动作拒绝 | fail-closed：配错了宁可不可用，也不能无鉴权 |
 
 ## 数据模型
+
+![数据模型](docs/images/08-data-model.png)
 
 五个集合，全部建议设为**「仅管理端可读写」**（见[自部署第 2 步](#2-创建五个集合并设置权限)）：
 
@@ -334,8 +336,10 @@ cp -r skills/workbench-cloudbase-auth   ~/.workbuddy/skills/
 │   ├── README.md
 │   ├── workbench-cloud-sync-upgrade/SKILL.md
 │   └── workbench-cloudbase-auth/SKILL.md
-├── docs/TECHNICAL.md                 # 详细技术文档（接口契约 / 错误码 / 本地开发）
-├── CHANGELOG.md                      # 更新日志
+├── docs/
+│   ├── TECHNICAL.md                 # 详细技术文档（接口契约 / 错误码 / 本地开发）
+│   └── images/                      # README 用图（界面截图与示意图）
+├── CHANGELOG.md                     # 更新日志
 ├── LICENSE
 └── README.md
 ```
@@ -364,6 +368,10 @@ cp -r skills/workbench-cloudbase-auth   ~/.workbuddy/skills/
 
 **访问**：https://chenmo-studio.app.workbuddy.host/admin-app/
 
+| 数据总览 | 用户管理 |
+|---|---|
+| ![后台数据总览](docs/images/04-admin-dashboard.png) | ![后台用户管理](docs/images/05-admin-users.png) |
+
 | 模块 | 能力 |
 |---|---|
 | 数据总览 | 注册/绑邮箱/停用/内容量四项指标，近 7 天注册趋势，四模块分布，账号内容量排行 |
@@ -380,6 +388,8 @@ cp -r skills/workbench-cloudbase-auth   ~/.workbuddy/skills/
 ## 隐私与合规
 
 v3.7 起补齐了账号类产品的基本合规项：
+
+![注册页：协议勾选](docs/images/03-auth-register.png)
 
 - **隐私政策与用户协议**：独立页面 [`privacy.html`](privacy.html)，写明收集范围、用途、境内存储、用户权利（查阅/更正/导出/删除/注销）、保留期限与联系方式
 - **注册需勾选同意**：注册表单带协议勾选框与链接，未勾选无法创建账号
@@ -407,6 +417,8 @@ v3.7 起补齐了账号类产品的基本合规项：
 ## 安全说明
 
 这是一个**公开部署的开源项目**，所以把已知的安全边界写在明处，方便你评估后再决定要不要照搬：
+
+![登录与限流](docs/images/07-auth-flow.png)
 
 **已经做到的**
 

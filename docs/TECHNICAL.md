@@ -51,6 +51,8 @@
 
 ## 3. 数据模型
 
+![数据模型](images/08-data-model.png)
+
 五个集合。生产环境建议全部设为**「仅管理端可读写」**（因为读写都走云函数的管理员权限）。
 
 ### `workbench_state` — 业务数据
@@ -182,6 +184,8 @@
 ---
 
 ## 5. 鉴权与限流
+
+![登录与限流](images/07-auth-flow.png)
 
 **用户 token**：登录时由 `issueToken()` 生成 48 位随机串，写入 `chenmo_sessions`（90 天）。每次带 token 的请求都查一次集合并比对 `exp`。前端存在 localStorage 的 `cwb_session`。
 
