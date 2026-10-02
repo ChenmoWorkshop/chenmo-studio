@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 创作工坊 build 20261002-0348：微信扫码/配对登录（网页出码，小程序授权）+ toast 层级修复 -->
+<!-- 创作工坊 build 20261002-1615：开放自助注册 + 移动端注册表单单列优化 -->
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
@@ -564,6 +564,10 @@
   .auth-cancel { text-align: center; margin-top: 2px; }
   .auth-cancel button, .auth-guest { border: none; background: transparent; color: var(--muted); font-size: 12px; text-decoration: underline; text-align: center; }
   .auth-guest { display: block; margin: auto auto 0; padding-top: 10px; }
+  /* 手机竖屏：账号/名称/密码等双列改单列，输入框全宽更好操作 */
+  @media (max-width: 640px) {
+    .auth-row { grid-template-columns: 1fr; }
+  }
   .ava-pick { display: flex; justify-content: center; }
   .auth-form .ava { width: 46px; height: 46px; }
   .ava-pick .ava {

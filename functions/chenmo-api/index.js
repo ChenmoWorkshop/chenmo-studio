@@ -26,7 +26,7 @@ const TOKEN_TTL = 90 * 24 * 3600 * 1000; /* 登录态 90 天 */
      2. 让对方完成注册
      3. 改回 false，再部署一次
    ──────────────────────────────────────────────────────────────────── */
-const ALLOW_REGISTER = false;
+const ALLOW_REGISTER = true;
 const DOC_IDS = {
   todos:    '00000000c0ffee0000000001',
   ideas:    '00000000c0ffee0000000002',
