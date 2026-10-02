@@ -1,0 +1,20 @@
+{
+  "name": "chenmo-admin",
+  "private": true,
+  "version": "3.6.0",
+  "type": "module",
+  "description": "尘墨工坊 / 创作工坊 云端管理后台",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vite": "^6.0.7"
+  }
+}

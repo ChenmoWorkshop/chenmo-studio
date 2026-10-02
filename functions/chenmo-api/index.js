@@ -27,6 +27,18 @@ const TOKEN_TTL = 90 * 24 * 3600 * 1000; /* 登录态 90 天 */
      3. 改回 false，再部署一次
    ──────────────────────────────────────────────────────────────────── */
 const ALLOW_REGISTER = true;
+
+/* ── 管理后台（admin/）专用 ────────────────────────────────────────────
+   管理后台走独立管理员密钥，与普通用户账号完全隔离：
+     ADMIN_KEY      写在函数环境变量里，不进任何仓库文件
+     adminLogin     用密钥换一张 8 小时的管理员令牌
+     其余 admin*    一律先验令牌
+   未配置 ADMIN_KEY 时所有管理动作直接拒绝（fail-closed），
+   避免"忘了配密钥就上线"导致任何人都能进后台。 */
+const ADMIN_KEY = process.env.ADMIN_KEY || '';
+const ADMIN_UID = '__admin__';
+const ADMIN_TTL = 8 * 3600 * 1000;      /* 管理员令牌 8 小时，远短于用户的 90 天 */
+
 const DOC_IDS = {
   todos:    '00000000c0ffee0000000001',
   ideas:    '00000000c0ffee0000000002',
@@ -331,6 +343,91 @@ function safeEq(a, b) {
 }
 function docId(uid, key) { return uid + '__' + key; }
 
+/* ============ 管理后台：鉴权 + 批量取集合 ============ */
+
+/* 校验管理员令牌；未配置密钥或令牌无效一律 false */
+async function authAdmin(db, token) {
+  if (!ADMIN_KEY) return false;
+  if (!token) return false;
+  const s = await getDoc(db, SESS_COL, String(token));
+  if (!s || s.role !== 'admin' || s.uid !== ADMIN_UID) return false;
+  if (s.exp && Date.now() > s.exp) return false;
+  return true;
+}
+
+/* 全量拉取集合（自动分页，上限保护） */
+async function colAll(db, colName, max) {
+  let out = [], skip = 0;
+  const pageSize = 100, limit = max || 5000;
+  while (skip < limit) {
+    let res;
+    try {
+      res = await db.collection(colName).skip(skip).limit(pageSize).get();
+    } catch (e) {
+      /* 某些版本不支持链式 skip */
+      try { res = await db.collection(colName).limit(pageSize).skip(skip).get(); }
+      catch (e2) { break; }
+    }
+    const data = (res && res.data) || [];
+    out = out.concat(data);
+    if (data.length < pageSize) break;
+    skip += pageSize;
+  }
+  return out;
+}
+
+/* 用户文档脱敏后才允许离开服务端 */
+function adminUserView(u) {
+  return {
+    uid: u.uid || u._id,
+    user: u.user || '',
+    name: u.name || '',
+    email: u.email || '',
+    avatar: u.avatar ? 'yes' : '',
+    banned: !!u.banned,
+    created_at: u.created_at || '',
+    last_login: u.last_login || '',
+    wxBound: !!u.wx_bound
+  };
+}
+
+/* 彻底删除一个账号：连带它的会话、业务数据、微信绑定、验证码 */
+async function purgeUser(db, uid) {
+  let sessions = 0, data = 0, wx = 0;
+  const all = await colAll(db, SESS_COL);
+  for (let i = 0; i < all.length; i++) {
+    if (all[i].uid === uid) {
+      try { await db.collection(SESS_COL).doc(all[i]._id).remove(); sessions++; } catch (e) {}
+    }
+  }
+  const allData = await colAll(db, COL);
+  for (let i = 0; i < allData.length; i++) {
+    if (allData[i].uid === uid) {
+      try { await db.collection(COL).doc(allData[i]._id).remove(); data++; } catch (e) {}
+    }
+  }
+  const allWx = await colAll(db, WXBIND_COL);
+  for (let i = 0; i < allWx.length; i++) {
+    if (allWx[i].uid === uid) {
+      try { await db.collection(WXBIND_COL).doc(allWx[i]._id).remove(); wx++; } catch (e) {}
+    }
+  }
+  try { await db.collection(USERS_COL).doc(uid).remove(); } catch (e) {}
+  return { sessions: sessions, data: data, wx: wx };
+}
+
+/* 吊销某个账号的全部会话（强制重新登录） */
+async function revokeUserSessions(db, uid) {
+  let n = 0;
+  const all = await colAll(db, SESS_COL);
+  for (let i = 0; i < all.length; i++) {
+    if (all[i].uid === uid) {
+      try { await db.collection(SESS_COL).doc(all[i]._id).remove(); n++; } catch (e) {}
+    }
+  }
+  return n;
+}
+
 /* ============ 密保邮箱：验证码 + 免费 SMTP 发信 ============
    为什么不用短信：国内短信需签名/模板报备审核（个人主体要绑定已上线的小程序/网站，
    备案前办不下来）；邮件走 QQ 邮箱免费 SMTP，零费用，找回密码这种低频场景足够。
@@ -497,6 +594,211 @@ async function handle(event) {
       return resp(200, headers, { ok: true, pong: true, env: ENV, auth: true });
     }
 
+    /* ================= 管理后台接口（独立管理员令牌） ================= */
+    /* 统一入口：除 adminLogin 外，每个动作都先验令牌 */
+    if (action === 'adminLogin') {
+      if (!ADMIN_KEY) {
+        return resp(200, headers, { ok: false, error: '云端未配置 ADMIN_KEY，管理后台不可用' });
+      }
+      if (!safeEq(String(body.key || ''), ADMIN_KEY)) {
+        return resp(200, headers, { ok: false, error: '管理员密钥不正确' });
+      }
+      const t = crypto.randomBytes(24).toString('hex');
+      const exp = Date.now() + ADMIN_TTL;
+      await db.collection(SESS_COL).doc(t).set({
+        uid: ADMIN_UID, role: 'admin', exp: exp, created_at: new Date().toISOString()
+      });
+      return resp(200, headers, { ok: true, token: t, exp: exp });
+    }
+
+    if (action === 'adminLogout') {
+      try { await db.collection(SESS_COL).doc(String(body.token || '')).remove(); } catch (e) {}
+      return resp(200, headers, { ok: true });
+    }
+
+    if (action.indexOf('admin') === 0) {
+      if (!(await authAdmin(db, body.token))) {
+        return resp(200, headers, { ok: false, needAdminAuth: true, error: '管理员登录已失效，请重新登录' });
+      }
+
+      /* ---- 数据总览：用户/内容统计 + 近 7 天注册趋势 ---- */
+      if (action === 'adminStats') {
+        const users = await colAll(db, USERS_COL);
+        const now = Date.now(), day = 86400000;
+        let banned = 0, withEmail = 0, today = 0, week = 0;
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(now + 8 * 3600000 - i * day).toISOString().slice(0, 10);
+          days.push({ date: d, n: 0 });
+        }
+        users.forEach(u => {
+          if (u.banned) banned++;
+          if (u.email) withEmail++;
+          if (!u.created_at) return;
+          const ts = Date.parse(u.created_at);
+          if (!ts) return;
+          if (now - ts < day) today++;
+          if (now - ts < 7 * day) week++;
+          const key = new Date(ts + 8 * 3600000).toISOString().slice(0, 10);
+          const slot = days.find(x => x.date === key);
+          if (slot) slot.n++;
+        });
+
+        /* 各账号内容量：扫描业务数据文档 */
+        const docs = await colAll(db, COL);
+        const itemsByKey = { todos: 0, ideas: 0, contents: 0, reviews: 0 };
+        const perUser = {};
+        docs.forEach(d => {
+          if (!KEYS.includes(d.key)) return;
+          const n = Array.isArray(d.items) ? d.items.length : 0;
+          itemsByKey[d.key] += n;
+          const owner = d.uid || 'legacy';
+          perUser[owner] = perUser[owner] || { uid: owner, todos: 0, ideas: 0, contents: 0, reviews: 0, total: 0 };
+          perUser[owner][d.key] += n;
+          perUser[owner].total += n;
+        });
+        const topUsers = Object.values(perUser).sort((a, b) => b.total - a.total).slice(0, 8);
+
+        return resp(200, headers, {
+          ok: true,
+          users: {
+            total: users.length, banned: banned, withEmail: withEmail,
+            today: today, week: week, trend: days
+          },
+          content: {
+            total: itemsByKey.todos + itemsByKey.ideas + itemsByKey.contents + itemsByKey.reviews,
+            byKey: itemsByKey, top: topUsers
+          }
+        });
+      }
+
+      /* ---- 用户列表：支持关键字搜索 + 分页 ---- */
+      if (action === 'adminUsers') {
+        const kw = String(body.kw || '').toLowerCase().trim();
+        let list = (await colAll(db, USERS_COL)).map(adminUserView);
+        if (kw) {
+          list = list.filter(u =>
+            String(u.user).toLowerCase().indexOf(kw) >= 0 ||
+            String(u.name).toLowerCase().indexOf(kw) >= 0 ||
+            String(u.email).toLowerCase().indexOf(kw) >= 0 ||
+            String(u.uid).toLowerCase().indexOf(kw) >= 0
+          );
+        }
+        list.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+        /* 同时查出微信绑定情况 */
+        const wx = await colAll(db, WXBIND_COL);
+        const wxSet = {};
+        wx.forEach(w => { if (w.uid) wxSet[w.uid] = (wxSet[w.uid] || 0) + 1; });
+        list.forEach(u => { u.wxBound = !!wxSet[u.uid]; });
+        return resp(200, headers, { ok: true, list: list, total: list.length });
+      }
+
+      /* ---- 单个用户的业务数据明细 ---- */
+      if (action === 'adminUserDetail') {
+        const uid = String(body.uid || '');
+        const u = await getUser(db, uid);
+        if (!u) return resp(200, headers, { ok: false, error: '账号不存在' });
+        const out = {};
+        for (let i = 0; i < KEYS.length; i++) {
+          const d = await getDoc(db, COL, docId(uid, KEYS[i]));
+          out[KEYS[i]] = d && Array.isArray(d.items) ? d.items : [];
+        }
+        const sessions = (await colAll(db, SESS_COL)).filter(s => s.uid === uid);
+        return resp(200, headers, {
+          ok: true, profile: adminUserView(u), data: out, sessions: sessions.length
+        });
+      }
+
+      /* ---- 对账号执行操作：封禁/解封/改密/解绑邮箱/吊销会话/删除 ---- */
+      if (action === 'adminUserAction') {
+        const uid = String(body.uid || '');
+        const op = String(body.op || '');
+        if (ADMIN_UID === uid) return resp(200, headers, { ok: false, error: '内置账号不可操作' });
+        const u = await getUser(db, uid);
+        if (!u) return resp(200, headers, { ok: false, error: '账号不存在' });
+
+        if (op === 'ban') {
+          await db.collection(USERS_COL).doc(uid).update({ banned: true, banned_at: new Date().toISOString() });
+          const n = await revokeUserSessions(db, uid);
+          return resp(200, headers, { ok: true, msg: '已封禁并强制下线（' + n + ' 个会话）' });
+        }
+        if (op === 'unban') {
+          await db.collection(USERS_COL).doc(uid).update({ banned: false, banned_at: '' });
+          return resp(200, headers, { ok: true, msg: '已解除封禁' });
+        }
+        if (op === 'resetPass') {
+          const np = String(body.newPass || '');
+          if (np.length < 6) return resp(200, headers, { ok: false, error: '新密码至少 6 位' });
+          const salt = newSalt();
+          await db.collection(USERS_COL).doc(uid).update({
+            salt: salt, hash: hashOf(np, salt), updated_at: new Date().toISOString()
+          });
+          const n = await revokeUserSessions(db, uid);
+          return resp(200, headers, { ok: true, msg: '密码已重置，已强制下线（' + n + ' 个会话）' });
+        }
+        if (op === 'unbindEmail') {
+          await db.collection(USERS_COL).doc(uid).update({ email: '' });
+          return resp(200, headers, { ok: true, msg: '已解绑密保邮箱' });
+        }
+        if (op === 'revokeSessions') {
+          const n = await revokeUserSessions(db, uid);
+          return resp(200, headers, { ok: true, msg: '已吊销 ' + n + ' 个会话，对方需重新登录' });
+        }
+        if (op === 'delete') {
+          const r = await purgeUser(db, uid);
+          return resp(200, headers, {
+            ok: true, msg: '账号已删除（会话 ' + r.sessions + '、数据 ' + r.data + '、微信绑定 ' + r.wx + '）'
+          });
+        }
+        return resp(200, headers, { ok: false, error: '不支持的操作：' + op });
+      }
+
+      /* ---- 运维：清理过期会话 / 验证码 ---- */
+      if (action === 'adminOps') {
+        const op = String(body.op || '');
+        const now = Date.now();
+        if (op === 'scan') {
+          const sess = await colAll(db, SESS_COL);
+          const ver = await colAll(db, VERIFY_COL);
+          const expSess = sess.filter(s => s.exp && s.exp < now);
+          const expVer = ver.filter(v => v.exp && v.exp < now);
+          return resp(200, headers, {
+            ok: true,
+            sessions: { total: sess.length, expired: expSess.length },
+            verify: { total: ver.length, expired: expVer.length },
+            adminSessions: sess.filter(s => s.role === 'admin').length
+          });
+        }
+        if (op === 'cleanSessions') {
+          const sess = await colAll(db, SESS_COL);
+          const targets = sess.filter(s => s.exp && s.exp < now && s.role !== 'admin');
+          for (let i = 0; i < targets.length; i++) {
+            try { await db.collection(SESS_COL).doc(targets[i]._id).remove(); } catch (e) {}
+          }
+          return resp(200, headers, { ok: true, msg: '已清理 ' + targets.length + ' 条过期会话' });
+        }
+        if (op === 'cleanVerify') {
+          const ver = await colAll(db, VERIFY_COL);
+          const targets = ver.filter(v => v.exp && v.exp < now);
+          for (let i = 0; i < targets.length; i++) {
+            try { await db.collection(VERIFY_COL).doc(targets[i]._id).remove(); } catch (e) {}
+          }
+          return resp(200, headers, { ok: true, msg: '已清理 ' + targets.length + ' 条过期验证码' });
+        }
+        if (op === 'cleanAdminSessions') {
+          const sess = await colAll(db, SESS_COL);
+          const targets = sess.filter(s => s.role === 'admin');
+          for (let i = 0; i < targets.length; i++) {
+            try { await db.collection(SESS_COL).doc(targets[i]._id).remove(); } catch (e) {}
+          }
+          return resp(200, headers, { ok: true, msg: '已登出全部管理员会话（' + targets.length + '）', logout: true });
+        }
+        return resp(200, headers, { ok: false, error: '不支持的运维操作：' + op });
+      }
+
+      return resp(200, headers, { ok: false, error: '未知管理动作：' + action });
+    }
+
     /* ---------- 注册（受 ALLOW_REGISTER 开关保护） ---------- */
     if (action === 'register') {
       if (!ALLOW_REGISTER) {
@@ -534,7 +836,11 @@ async function handle(event) {
       if (!u || !u.salt || !safeEq(hashOf(String(body.pass || ''), u.salt), u.hash)) {
         return resp(200, headers, { ok: false, error: '账号或密码不对' });
       }
+      if (u.banned) {
+        return resp(200, headers, { ok: false, error: '该账号已被管理员停用，请联系作者处理' });
+      }
       const token = await issueToken(db, uid);
+      try { await db.collection(USERS_COL).doc(uid).update({ last_login: new Date().toISOString() }); } catch (e) {}
       return resp(200, headers, { ok: true, token: token, profile: publicProfile(u) });
     }
 
